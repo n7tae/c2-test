@@ -7,6 +7,9 @@
 *.o
 *.obj
 
+# visual code
+.vscode
+
 # Precompiled Headers
 *.gch
 *.pch
@@ -27,6 +30,5 @@
 *.lib
 
 # Executables
-*.exe
-*.out
-*.app
+c2enc
+c2dec
