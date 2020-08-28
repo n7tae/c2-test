@@ -96,16 +96,14 @@ int main(int argc, char *argv[])
 	if (strcmp(argv[2], "-")  == 0) fin = stdin;
 	else if ( (fin = fopen(argv[2],"rb")) == NULL )
 	{
-		fprintf(stderr, "Error opening input bit file: %s: %s.\n",
-				argv[2], strerror(errno));
+		fprintf(stderr, "Error opening input bit file: %s: %s.\n", argv[2], strerror(errno));
 		exit(1);
 	}
 
 	if (strcmp(argv[3], "-") == 0) fout = stdout;
 	else if ( (fout = fopen(argv[3],"wb")) == NULL )
 	{
-		fprintf(stderr, "Error opening output speech file: %s: %s.\n",
-				argv[3], strerror(errno));
+		fprintf(stderr, "Error opening output speech file: %s: %s.\n", argv[3], strerror(errno));
 		exit(1);
 	}
 

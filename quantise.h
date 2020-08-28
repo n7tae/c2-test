@@ -48,11 +48,8 @@
 #define LPCPF_BETA  0.2
 
 void quantise_init();
-float lpc_model_amplitudes(float Sn[], float w[], MODEL *model, int order,
-			   int lsp,float ak[]);
-void aks_to_M2(codec2_fftr_cfg fftr_fwd_cfg, float ak[], int order, MODEL *model,
-	       float E, float *snr, int dump, int sim_pf,
-               int pf, int bass_boost, float beta, float gamma, COMP Aw[]);
+float lpc_model_amplitudes(float Sn[], float w[], MODEL *model, int order, int lsp,float ak[]);
+void aks_to_M2(codec2_fftr_cfg fftr_fwd_cfg, float ak[], int order, MODEL *model, float E, float *snr, int dump, int sim_pf, int pf, int bass_boost, float beta, float gamma, COMP Aw[]);
 
 int   encode_Wo(C2CONST *c2const, float Wo, int bits);
 float decode_Wo(C2CONST *c2const, int index, int bits);
@@ -87,22 +84,11 @@ int lspd_bits(int i);
 int lsp_pred_vq_bits(int i);
 
 void apply_lpc_correction(MODEL *model);
-float speech_to_uq_lsps(float lsp[],
-			float ak[],
-		        float Sn[],
-		        float w[],
-		        int m_pitch,
-                        int   order
-			);
+float speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[], int m_pitch, int order);
 int check_lsp_order(float lsp[], int lpc_order);
 void bw_expand_lsps(float lsp[], int order, float min_sep_low, float min_sep_high);
 void bw_expand_lsps2(float lsp[], int order);
 void locate_lsps_jnd_steps(float lsp[], int order);
-float decode_amplitudes(MODEL *model,
-			float  ak[],
-		        int    lsp_indexes[],
-		        int    energy_index,
-			float  lsps[],
-			float *e);
+float decode_amplitudes(MODEL *model, float  ak[], int lsp_indexes[], int energy_index, float  lsps[], float *e);
 
 #endif

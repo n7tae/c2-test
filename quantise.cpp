@@ -98,17 +98,17 @@ void quantise_init()
 
 \*---------------------------------------------------------------------------*/
 
-long quantise(const float * cb, float vec[], float w[], int k, int m, float *se)
-/* float   cb[][K];	current VQ codebook		*/
-/* float   vec[];	vector to quantise		*/
-/* float   w[];         weighting vector                */
-/* int	   k;		dimension of vectors		*/
-/* int     m;		size of codebook		*/
-/* float   *se;		accumulated squared error 	*/
+long quantise(const float *cb, float vec[], float w[], int k, int m, float *se)
+/* float   cb[][K];	current VQ codebook       */
+/* float   vec[];	vector to quantise        */
+/* float   w[];     weighting vector          */
+/* int	   k;		dimension of vectors      */
+/* int     m;		size of codebook          */
+/* float   *se;		accumulated squared error */
 {
-	float   e;		/* current error		*/
-	long	   besti;	/* best index so far		*/
-	float   beste;	/* best error so far		*/
+	float   e;			/* current error		*/
+	long	   besti;	/* best index so far	*/
+	float   beste;		/* best error so far	*/
 	long	   j;
 	int     i;
 	float   diff;
@@ -145,11 +145,7 @@ long quantise(const float * cb, float vec[], float w[], int k, int m, float *se)
 
 \*---------------------------------------------------------------------------*/
 
-void encode_lspds_scalar(
-	int   indexes[],
-	float lsp[],
-	int   order
-)
+void encode_lspds_scalar(int indexes[], float lsp[], int order)
 {
 	int   i,k,m;
 	float lsp_hz[order];
@@ -198,11 +194,7 @@ void encode_lspds_scalar(
 }
 
 
-void decode_lspds_scalar(
-	float lsp_[],
-	int   indexes[],
-	int   order
-)
+void decode_lspds_scalar( float lsp_[], int indexes[], int   order)
 {
 	int   i,k;
 	float lsp__hz[order];
@@ -382,8 +374,7 @@ void force_min_lsp_dist(float lsp[], int order)
 
 \*---------------------------------------------------------------------------*/
 
-void lpc_post_filter(codec2_fftr_cfg fftr_fwd_cfg, float Pw[], float ak[],
-					 int order, int dump, float beta, float gamma, int bass_boost, float E)
+void lpc_post_filter(codec2_fftr_cfg fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E)
 {
 	int   i;
 	float x[FFT_ENC];   /* input to FFTs                */
@@ -504,9 +495,9 @@ void aks_to_M2(
 	codec2_fftr_cfg  fftr_fwd_cfg,
 	float         ak[],	     /* LPC's */
 	int           order,
-	MODEL        *model,	     /* sinusoidal model parameters for this frame */
-	float         E,	     /* energy term */
-	float        *snr,	     /* signal to noise ratio for this frame in dB */
+	MODEL        *model,	   /* sinusoidal model parameters for this frame */
+	float         E,	       /* energy term */
+	float        *snr,	       /* signal to noise ratio for this frame in dB */
 	int           dump,        /* true to dump sample to dump file */
 	int           sim_pf,      /* true to simulate a post filter */
 	int           pf,          /* true to enable actual LPC post filter */
@@ -750,13 +741,7 @@ float decode_log_Wo(C2CONST *c2const, int index, int bits)
 
 \*---------------------------------------------------------------------------*/
 
-float speech_to_uq_lsps(float lsp[],
-						float ak[],
-						float Sn[],
-						float w[],
-						int m_pitch,
-						int   order
-					   )
+float speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[], int m_pitch, int order)
 {
 	int   i, roots;
 	float Wn[m_pitch];
@@ -994,9 +979,7 @@ void bw_expand_lsps(float lsp[], int order, float min_sep_low, float min_sep_hig
 	}
 }
 
-void bw_expand_lsps2(float lsp[],
-					 int   order
-					)
+void bw_expand_lsps2(float lsp[], int order)
 {
 	int i;
 
@@ -1291,4 +1274,3 @@ void decode_WoE(C2CONST *c2const, MODEL *model, float *e, float xq[], int n1)
 
 	*e = POW10F(xq[1]/10.0);
 }
-

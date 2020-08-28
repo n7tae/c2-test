@@ -45,11 +45,4 @@ void codec2_decode_wb(struct CODEC2 *c2, short speech[], const unsigned char * b
 void codec2_encode_wb(struct CODEC2 *c2, unsigned char * bits, short speech[]);
 void experiment_rate_K_dct2(C2CONST *c2const, MODEL model_frames[], int frames);
 
-#ifdef	__cplusplus
-extern "C" {
-#endif
-#ifdef	__cplusplus
-}
-#endif
-
 #endif	/* C2WIDEBAND_H */

@@ -31,10 +31,6 @@
 
 #include "version.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define CODEC2_MODE_3200 	0
 #define CODEC2_MODE_2400 	1
 #define CODEC2_MODE_1600 	2
@@ -89,7 +85,7 @@ extern "C" {
 
 struct CODEC2;
 
-struct CODEC2 *  codec2_create(int mode);
+struct CODEC2 *codec2_create(int mode);
 void codec2_destroy(struct CODEC2 *codec2_state);
 void codec2_encode(struct CODEC2 *codec2_state, unsigned char * bits, short speech_in[]);
 void codec2_decode(struct CODEC2 *codec2_state, short speech_out[], const unsigned char *bits);
@@ -113,9 +109,5 @@ float *codec2_enable_user_ratek(struct CODEC2 *codec2_state, int *K);
 // 700C post filter and equaliser
 void codec2_700c_post_filter(struct CODEC2 *codec2_state, int en);
 void codec2_700c_eq(struct CODEC2 *codec2_state, int en);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
