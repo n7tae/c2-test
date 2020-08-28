@@ -54,13 +54,9 @@
 
 \*---------------------------------------------------------------------------*/
 
-void n2_mel_sample_freqs_kHz(float rate_K_sample_freqs_kHz[], int K)
+void CNewamp2::n2_mel_sample_freqs_kHz(float rate_K_sample_freqs_kHz[], int K)
 {
-	float freq[] = {0.199816, 0.252849, 0.309008, 0.368476, 0.431449, 0.498134, 0.568749, 0.643526, 0.722710, 0.806561, 0.895354, 0.989380,
-					1.088948, 1.194384, 1.306034, 1.424264, 1.549463, 1.682041, 1.822432, 1.971098, 2.128525, 2.295232, 2.471763, 2.658699,
-					2.856652, 3.066272, 3.288246, 3.523303, 3.772214, 4.035795, 4.314912, 4.610478, 4.923465, 5.254899, 5.605865, 5.977518,
-					6.371075, 6.787827, 7.229141, 7.696465
-				   };
+	const float freq[] = {0.199816, 0.252849, 0.309008, 0.368476, 0.431449, 0.498134, 0.568749, 0.643526, 0.722710, 0.806561, 0.895354, 0.989380, 1.088948, 1.194384, 1.306034, 1.424264, 1.549463, 1.682041, 1.822432, 1.971098, 2.128525, 2.295232, 2.471763, 2.658699, 2.856652, 3.066272, 3.288246, 3.523303, 3.772214, 4.035795, 4.314912, 4.610478, 4.923465, 5.254899, 5.605865, 5.977518, 6.371075, 6.787827, 7.229141, 7.696465 };
 	int k;
 	//printf("\n\n");
 	for (k=0; k<K; k++)
@@ -83,7 +79,7 @@ void n2_mel_sample_freqs_kHz(float rate_K_sample_freqs_kHz[], int K)
 
 \*---------------------------------------------------------------------------*/
 
-void n2_resample_const_rate_f(C2CONST *c2const, MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K)
+void CNewamp2::n2_resample_const_rate_f(C2CONST *c2const, MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K)
 {
 	int m;
 	float AmdB[MAX_AMP+1], rate_L_sample_freqs_kHz[MAX_AMP+1], AmdB_peak;
@@ -127,7 +123,7 @@ void n2_resample_const_rate_f(C2CONST *c2const, MODEL *model, float rate_K_vec[]
 
 \*---------------------------------------------------------------------------*/
 
-void n2_rate_K_mbest_encode(int *indexes, float *x, float *xq, int ndim)
+void CNewamp2::n2_rate_K_mbest_encode(int *indexes, float *x, float *xq, int ndim)
 {
 	int i, n1;
 	const float *codebook1 = newamp2vq_cb[0].cb;
@@ -174,7 +170,7 @@ void n2_rate_K_mbest_encode(int *indexes, float *x, float *xq, int ndim)
 
 \*---------------------------------------------------------------------------*/
 
-void n2_resample_rate_L(C2CONST *c2const, MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K,int plosive_flag)
+void CNewamp2::n2_resample_rate_L(C2CONST *c2const, MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K,int plosive_flag)
 {
 	float rate_K_vec_term[K+2], rate_K_sample_freqs_kHz_term[K+2];
 	float AmdB[MAX_AMP+1], rate_L_sample_freqs_kHz[MAX_AMP+1];
@@ -225,7 +221,7 @@ void n2_resample_rate_L(C2CONST *c2const, MODEL *model, float rate_K_vec[], floa
 
 \*---------------------------------------------------------------------------*/
 
-void n2_post_filter_newamp2(float vec[], float sample_freq_kHz[], int K, float pf_gain)
+void CNewamp2::n2_post_filter_newamp2(float vec[], float sample_freq_kHz[], int K, float pf_gain)
 {
 	int k;
 
@@ -270,17 +266,7 @@ void n2_post_filter_newamp2(float vec[], float sample_freq_kHz[], int K, float p
 
 \*---------------------------------------------------------------------------*/
 
-void newamp2_model_to_indexes(C2CONST *c2const,
-							  int    indexes[],
-							  MODEL *model,
-							  float  rate_K_vec[],
-							  float  rate_K_sample_freqs_kHz[],
-							  int    K,
-							  float *mean,
-							  float  rate_K_vec_no_mean[],
-							  float  rate_K_vec_no_mean_[],
-							  int    plosive
-							 )
+void CNewamp2::newamp2_model_to_indexes(C2CONST *c2const, int indexes[], MODEL *model, float rate_K_vec[], float  rate_K_sample_freqs_kHz[], int K, float *mean, float rate_K_vec_no_mean[], float rate_K_vec_no_mean_[], int plosive)
 {
 	int k;
 
@@ -306,12 +292,7 @@ void newamp2_model_to_indexes(C2CONST *c2const,
 
 	float w[1] = {1.0};
 	float se;
-	indexes[2] = quantise(newamp2_energy_cb[0].cb,
-						  mean,
-						  w,
-						  newamp2_energy_cb[0].k,
-						  newamp2_energy_cb[0].m,
-						  &se);
+	indexes[2] = quantise(newamp2_energy_cb[0].cb, mean, w, newamp2_energy_cb[0].k, newamp2_energy_cb[0].m, &se);
 
 	/* scalar quantise Wo.  We steal the smallest Wo index to signal
 	   an unvoiced frame */
@@ -352,13 +333,7 @@ void newamp2_model_to_indexes(C2CONST *c2const,
 
 \*---------------------------------------------------------------------------*/
 
-void newamp2_indexes_to_rate_K_vec(float  rate_K_vec_[],
-								   float  rate_K_vec_no_mean_[],
-								   float  rate_K_sample_freqs_kHz[],
-								   int    K,
-								   float *mean_,
-								   int    indexes[],
-								   float  pf_gain)
+void CNewamp2::newamp2_indexes_to_rate_K_vec(float rate_K_vec_[], float rate_K_vec_no_mean_[], float rate_K_sample_freqs_kHz[], int K, float *mean_, int indexes[], float pf_gain)
 {
 	int   k;
 	const float *codebook1 = newamp2vq_cb[0].cb;
@@ -392,13 +367,7 @@ void newamp2_indexes_to_rate_K_vec(float  rate_K_vec_[],
 
 \*---------------------------------------------------------------------------*/
 
-void newamp2_16k_indexes_to_rate_K_vec(float  rate_K_vec_[],
-									   float  rate_K_vec_no_mean_[],
-									   float  rate_K_sample_freqs_kHz[],
-									   int    K,
-									   float *mean_,
-									   int    indexes[],
-									   float  pf_gain)
+void CNewamp2::newamp2_16k_indexes_to_rate_K_vec(float rate_K_vec_[], float rate_K_vec_no_mean_[], float rate_K_sample_freqs_kHz[], int K, float *mean_, int indexes[], float  pf_gain)
 {
 	int   k;
 	const float *codebook1 = newamp2vq_cb[0].cb;
@@ -445,7 +414,7 @@ void newamp2_16k_indexes_to_rate_K_vec(float  rate_K_vec_[],
 
 \*---------------------------------------------------------------------------*/
 
-void newamp2_interpolate(float interpolated_surface_[], float left_vec[], float right_vec[], int K, int plosive_flag)
+void CNewamp2::newamp2_interpolate(float interpolated_surface_[], float left_vec[], float right_vec[], int K, int plosive_flag)
 {
 	int  i, k;
 	int  M = 4;
@@ -496,20 +465,7 @@ void newamp2_interpolate(float interpolated_surface_[], float left_vec[], float 
 
 \*---------------------------------------------------------------------------*/
 
-void newamp2_indexes_to_model(C2CONST *c2const,
-							  MODEL  model_[],
-							  COMP   H[],
-							  float *interpolated_surface_,
-							  float  prev_rate_K_vec_[],
-							  float  *Wo_left,
-							  int    *voicing_left,
-							  float  rate_K_sample_freqs_kHz[],
-							  int    K,
-							  codec2_fft_cfg fwd_cfg,
-							  codec2_fft_cfg inv_cfg,
-							  int    indexes[],
-							  float pf_gain,
-							  int flag16k)
+void CNewamp2::newamp2_indexes_to_model(C2CONST *c2const, MODEL model_[], COMP H[], float *interpolated_surface_, float prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float rate_K_sample_freqs_kHz[], int K, codec2_fft_cfg fwd_cfg, codec2_fft_cfg inv_cfg, int indexes[], float pf_gain, int flag16k)
 {
 	float rate_K_vec_[K], rate_K_vec_no_mean_[K], mean_, Wo_right;
 	int   voicing_right, k;
@@ -519,23 +475,11 @@ void newamp2_indexes_to_model(C2CONST *c2const,
 
 	if(flag16k == 0)
 	{
-		newamp2_indexes_to_rate_K_vec(rate_K_vec_,
-									  rate_K_vec_no_mean_,
-									  rate_K_sample_freqs_kHz,
-									  K,
-									  &mean_,
-									  indexes,
-									  pf_gain);
+		newamp2_indexes_to_rate_K_vec(rate_K_vec_, rate_K_vec_no_mean_, rate_K_sample_freqs_kHz, K, &mean_, indexes, pf_gain);
 	}
 	else
 	{
-		newamp2_16k_indexes_to_rate_K_vec(rate_K_vec_,
-										  rate_K_vec_no_mean_,
-										  rate_K_sample_freqs_kHz,
-										  K,
-										  &mean_,
-										  indexes,
-										  pf_gain);
+		newamp2_16k_indexes_to_rate_K_vec(rate_K_vec_, rate_K_vec_no_mean_, rate_K_sample_freqs_kHz, K, &mean_, indexes, pf_gain);
 	}
 
 
@@ -613,4 +557,3 @@ void newamp2_indexes_to_model(C2CONST *c2const,
 	*voicing_left = voicing_right;
 
 }
-

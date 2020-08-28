@@ -47,92 +47,23 @@
 
 /*---------------------------------------------------------------------------*\
 
-                          FUNCTION HEADERS
-
-\*---------------------------------------------------------------------------*/
-
-float speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[],
-						int m_pitch, int order);
-
-/*---------------------------------------------------------------------------*\
-
                              FUNCTIONS
 
 \*---------------------------------------------------------------------------*/
 
-int lsp_bits(int i)
+int CQuantize::lsp_bits(int i)
 {
 	return lsp_cb[i].log2m;
 }
 
-int lspd_bits(int i)
+int CQuantize::lspd_bits(int i)
 {
 	return lsp_cbd[i].log2m;
 }
 
-int lsp_pred_vq_bits(int i)
+int CQuantize::lsp_pred_vq_bits(int i)
 {
 	return lsp_cbjvm[i].log2m;
-}
-
-/*---------------------------------------------------------------------------*\
-
-  quantise_init
-
-  Loads the entire LSP quantiser comprised of several vector quantisers
-  (codebooks).
-
-\*---------------------------------------------------------------------------*/
-
-void quantise_init()
-{
-}
-
-/*---------------------------------------------------------------------------*\
-
-  quantise
-
-  Quantises vec by choosing the nearest vector in codebook cb, and
-  returns the vector index.  The squared error of the quantised vector
-  is added to se.
-
-\*---------------------------------------------------------------------------*/
-
-long quantise(const float *cb, float vec[], float w[], int k, int m, float *se)
-/* float   cb[][K];	current VQ codebook       */
-/* float   vec[];	vector to quantise        */
-/* float   w[];     weighting vector          */
-/* int	   k;		dimension of vectors      */
-/* int     m;		size of codebook          */
-/* float   *se;		accumulated squared error */
-{
-	float   e;			/* current error		*/
-	long	   besti;	/* best index so far	*/
-	float   beste;		/* best error so far	*/
-	long	   j;
-	int     i;
-	float   diff;
-
-	besti = 0;
-	beste = 1E32;
-	for(j=0; j<m; j++)
-	{
-		e = 0.0;
-		for(i=0; i<k; i++)
-		{
-			diff = cb[j*k+i]-vec[i];
-			e += (diff*w[i] * diff*w[i]);
-		}
-		if (e < beste)
-		{
-			beste = e;
-			besti = j;
-		}
-	}
-
-	*se += beste;
-
-	return(besti);
 }
 
 
@@ -145,7 +76,7 @@ long quantise(const float *cb, float vec[], float w[], int k, int m, float *se)
 
 \*---------------------------------------------------------------------------*/
 
-void encode_lspds_scalar(int indexes[], float lsp[], int order)
+void CQuantize::encode_lspds_scalar(int indexes[], float lsp[], int order)
 {
 	int   i,k,m;
 	float lsp_hz[order];
@@ -194,7 +125,7 @@ void encode_lspds_scalar(int indexes[], float lsp[], int order)
 }
 
 
-void decode_lspds_scalar( float lsp_[], int indexes[], int   order)
+void CQuantize::decode_lspds_scalar( float lsp_[], int indexes[], int   order)
 {
 	int   i,k;
 	float lsp__hz[order];
@@ -221,7 +152,7 @@ void decode_lspds_scalar( float lsp_[], int indexes[], int   order)
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX_ENTRIES 16384
 
-void compute_weights(const float *x, float *w, int ndim)
+void CQuantize::compute_weights(const float *x, float *w, int ndim)
 {
 	int i;
 	w[0] = MIN(x[0], x[1]-x[0]);
@@ -233,7 +164,7 @@ void compute_weights(const float *x, float *w, int ndim)
 		w[i] = 1./(.01+w[i]);
 }
 
-int find_nearest(const float *codebook, int nb_entries, float *x, int ndim)
+int CQuantize::find_nearest(const float *codebook, int nb_entries, float *x, int ndim)
 {
 	int i, j;
 	float min_dist = 1e15;
@@ -253,67 +184,7 @@ int find_nearest(const float *codebook, int nb_entries, float *x, int ndim)
 	return nearest;
 }
 
-int find_nearest_weighted(const float *codebook, int nb_entries, float *x, const float *w, int ndim)
-{
-	int i, j;
-	float min_dist = 1e15;
-	int nearest = 0;
-
-	for (i=0; i<nb_entries; i++)
-	{
-		float dist=0;
-		for (j=0; j<ndim; j++)
-			dist += w[j]*(x[j]-codebook[i*ndim+j])*(x[j]-codebook[i*ndim+j]);
-		if (dist<min_dist)
-		{
-			min_dist = dist;
-			nearest = i;
-		}
-	}
-	return nearest;
-}
-
-void lspjvm_quantise(float *x, float *xq, int order)
-{
-	int i, n1, n2, n3;
-	float err[order], err2[order], err3[order];
-	float w[order], w2[order], w3[order];
-	const float *codebook1 = lsp_cbjvm[0].cb;
-	const float *codebook2 = lsp_cbjvm[1].cb;
-	const float *codebook3 = lsp_cbjvm[2].cb;
-
-	w[0] = MIN(x[0], x[1]-x[0]);
-	for (i=1; i<order-1; i++)
-		w[i] = MIN(x[i]-x[i-1], x[i+1]-x[i]);
-	w[order-1] = MIN(x[order-1]-x[order-2], PI-x[order-1]);
-
-	compute_weights(x, w, order);
-
-	n1 = find_nearest(codebook1, lsp_cbjvm[0].m, x, order);
-
-	for (i=0; i<order; i++)
-	{
-		xq[i] = codebook1[order*n1+i];
-		err[i] = x[i] - xq[i];
-	}
-	for (i=0; i<order/2; i++)
-	{
-		err2[i] = err[2*i];
-		err3[i] = err[2*i+1];
-		w2[i] = w[2*i];
-		w3[i] = w[2*i+1];
-	}
-	n2 = find_nearest_weighted(codebook2, lsp_cbjvm[1].m, err2, w2, order/2);
-	n3 = find_nearest_weighted(codebook3, lsp_cbjvm[2].m, err3, w3, order/2);
-
-	for (i=0; i<order/2; i++)
-	{
-		xq[2*i] += codebook2[order*n2/2+i];
-		xq[2*i+1] += codebook3[order*n3/2+i];
-	}
-}
-
-int check_lsp_order(float lsp[], int order)
+int CQuantize::check_lsp_order(float lsp[], int order)
 {
 	int   i;
 	float tmp;
@@ -333,7 +204,7 @@ int check_lsp_order(float lsp[], int order)
 	return swaps;
 }
 
-void force_min_lsp_dist(float lsp[], int order)
+void CQuantize::force_min_lsp_dist(float lsp[], int order)
 {
 	int   i;
 
@@ -374,7 +245,7 @@ void force_min_lsp_dist(float lsp[], int order)
 
 \*---------------------------------------------------------------------------*/
 
-void lpc_post_filter(codec2_fftr_cfg fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E)
+void CQuantize::lpc_post_filter(codec2_fftr_cfg fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E)
 {
 	int   i;
 	float x[FFT_ENC];   /* input to FFTs                */
@@ -491,7 +362,7 @@ void lpc_post_filter(codec2_fftr_cfg fftr_fwd_cfg, float Pw[], float ak[], int o
 
 \*---------------------------------------------------------------------------*/
 
-void aks_to_M2(
+void CQuantize::aks_to_M2(
 	codec2_fftr_cfg  fftr_fwd_cfg,
 	float         ak[],	     /* LPC's */
 	int           order,
@@ -641,7 +512,7 @@ void aks_to_M2(
 
 \*---------------------------------------------------------------------------*/
 
-int encode_Wo(C2CONST *c2const, float Wo, int bits)
+int CQuantize::encode_Wo(C2CONST *c2const, float Wo, int bits)
 {
 	int   index, Wo_levels = 1<<bits;
 	float Wo_min = c2const->Wo_min;
@@ -666,7 +537,7 @@ int encode_Wo(C2CONST *c2const, float Wo, int bits)
 
 \*---------------------------------------------------------------------------*/
 
-float decode_Wo(C2CONST *c2const, int index, int bits)
+float CQuantize::decode_Wo(C2CONST *c2const, int index, int bits)
 {
 	float Wo_min = c2const->Wo_min;
 	float Wo_max = c2const->Wo_max;
@@ -682,55 +553,6 @@ float decode_Wo(C2CONST *c2const, int index, int bits)
 
 /*---------------------------------------------------------------------------*\
 
-  FUNCTION....: encode_log_Wo()
-  AUTHOR......: David Rowe
-  DATE CREATED: 22/8/2010
-
-  Encodes Wo in the log domain using a WO_LEVELS quantiser.
-
-\*---------------------------------------------------------------------------*/
-
-int encode_log_Wo(C2CONST *c2const, float Wo, int bits)
-{
-	int   index, Wo_levels = 1<<bits;
-	float Wo_min = c2const->Wo_min;
-	float Wo_max = c2const->Wo_max;
-	float norm;
-
-	norm = (log10f(Wo) - log10f(Wo_min))/(log10f(Wo_max) - log10f(Wo_min));
-	index = floorf(Wo_levels * norm + 0.5);
-	if (index < 0 ) index = 0;
-	if (index > (Wo_levels-1)) index = Wo_levels-1;
-
-	return index;
-}
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: decode_log_Wo()
-  AUTHOR......: David Rowe
-  DATE CREATED: 22/8/2010
-
-  Decodes Wo using a WO_LEVELS quantiser in the log domain.
-
-\*---------------------------------------------------------------------------*/
-
-float decode_log_Wo(C2CONST *c2const, int index, int bits)
-{
-	float Wo_min = c2const->Wo_min;
-	float Wo_max = c2const->Wo_max;
-	float step;
-	float Wo;
-	int   Wo_levels = 1<<bits;
-
-	step = (log10f(Wo_max) - log10f(Wo_min))/Wo_levels;
-	Wo   = log10f(Wo_min) + step*(index);
-
-	return POW10F(Wo);
-}
-
-/*---------------------------------------------------------------------------*\
-
   FUNCTION....: speech_to_uq_lsps()
   AUTHOR......: David Rowe
   DATE CREATED: 22/8/2010
@@ -741,7 +563,7 @@ float decode_log_Wo(C2CONST *c2const, int index, int bits)
 
 \*---------------------------------------------------------------------------*/
 
-float speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[], int m_pitch, int order)
+float CQuantize::speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[], int m_pitch, int order)
 {
 	int   i, roots;
 	float Wn[m_pitch];
@@ -802,7 +624,7 @@ float speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[], int m_pi
 
 \*---------------------------------------------------------------------------*/
 
-void encode_lsps_scalar(int indexes[], float lsp[], int order)
+void CQuantize::encode_lsps_scalar(int indexes[], float lsp[], int order)
 {
 	int    i,k,m;
 	float  wt[1];
@@ -839,7 +661,7 @@ void encode_lsps_scalar(int indexes[], float lsp[], int order)
 
 \*---------------------------------------------------------------------------*/
 
-void decode_lsps_scalar(float lsp[], int indexes[], int order)
+void CQuantize::decode_lsps_scalar(float lsp[], int indexes[], int order)
 {
 	int    i,k;
 	float  lsp_hz[order];
@@ -868,7 +690,7 @@ void decode_lsps_scalar(float lsp[], int indexes[], int order)
 
 \*---------------------------------------------------------------------------*/
 
-void encode_lsps_vq(int *indexes, float *x, float *xq, int order)
+void CQuantize::encode_lsps_vq(int *indexes, float *x, float *xq, int order)
 {
 	int i, n1, n2, n3;
 	float err[order], err2[order], err3[order];
@@ -915,7 +737,7 @@ void encode_lsps_vq(int *indexes, float *x, float *xq, int order)
 
 \*---------------------------------------------------------------------------*/
 
-void decode_lsps_vq(int *indexes, float *xq, int order, int stages)
+void CQuantize::decode_lsps_vq(int *indexes, float *xq, int order, int stages)
 {
 	int i, n1, n2, n3;
 	const float *codebook1 = lsp_cbjvm[0].cb;
@@ -956,7 +778,7 @@ void decode_lsps_vq(int *indexes, float *xq, int order, int stages)
 
 \*---------------------------------------------------------------------------*/
 
-void bw_expand_lsps(float lsp[], int order, float min_sep_low, float min_sep_high)
+void CQuantize::bw_expand_lsps(float lsp[], int order, float min_sep_low, float min_sep_high)
 {
 	int i;
 
@@ -980,30 +802,6 @@ void bw_expand_lsps(float lsp[], int order, float min_sep_low, float min_sep_hig
 	}
 }
 
-void bw_expand_lsps2(float lsp[], int order)
-{
-	int i;
-
-	for(i=1; i<4; i++)
-	{
-
-		if ((lsp[i] - lsp[i-1]) < 100.0*(PI/4000.0))
-			lsp[i] = lsp[i-1] + 100.0*(PI/4000.0);
-
-	}
-
-	/* As quantiser gaps increased, larger BW expansion was required
-	   to prevent twinkly noises.  This may need more experiment for
-	   different quanstisers.
-	*/
-
-	for(i=4; i<order; i++)
-	{
-		if (lsp[i] - lsp[i-1] < 200.0*(PI/4000.0))
-			lsp[i] = lsp[i-1] + 200.0*(PI/4000.0);
-	}
-}
-
 /*---------------------------------------------------------------------------*\
 
   FUNCTION....: apply_lpc_correction()
@@ -1015,7 +813,7 @@ void bw_expand_lsps2(float lsp[], int order)
 
 \*---------------------------------------------------------------------------*/
 
-void apply_lpc_correction(MODEL *model)
+void CQuantize::apply_lpc_correction(MODEL *model)
 {
 	if (model->Wo < (PI*150.0/4000))
 	{
@@ -1033,7 +831,7 @@ void apply_lpc_correction(MODEL *model)
 
 \*---------------------------------------------------------------------------*/
 
-int encode_energy(float e, int bits)
+int CQuantize::encode_energy(float e, int bits)
 {
 	int   index, e_levels = 1<<bits;
 	float e_min = E_MIN_DB;
@@ -1059,7 +857,7 @@ int encode_energy(float e, int bits)
 
 \*---------------------------------------------------------------------------*/
 
-float decode_energy(int index, int bits)
+float CQuantize::decode_energy(int index, int bits)
 {
 	float e_min = E_MIN_DB;
 	float e_max = E_MAX_DB;
@@ -1072,206 +870,4 @@ float decode_energy(int index, int bits)
 	e    = POW10F(e/10.0);
 
 	return e;
-}
-
-
-static float ge_coeff[2] = {0.8, 0.9};
-
-void compute_weights2(const float *x, const float *xp, float *w)
-{
-	w[0] = 30;
-	w[1] = 1;
-	if (x[1]<0)
-	{
-		w[0] *= .6;
-		w[1] *= .3;
-	}
-	if (x[1]<-10)
-	{
-		w[0] *= .3;
-		w[1] *= .3;
-	}
-	/* Higher weight if pitch is stable */
-	if (fabsf(x[0]-xp[0])<.2)
-	{
-		w[0] *= 2;
-		w[1] *= 1.5;
-	}
-	else if (fabsf(x[0]-xp[0])>.5)   /* Lower if not stable */
-	{
-		w[0] *= .5;
-	}
-
-	/* Lower weight for low energy */
-	if (x[1] < xp[1]-10)
-	{
-		w[1] *= .5;
-	}
-	if (x[1] < xp[1]-20)
-	{
-		w[1] *= .5;
-	}
-
-	//w[0] = 30;
-	//w[1] = 1;
-
-	/* Square the weights because it's applied on the squared error */
-	w[0] *= w[0];
-	w[1] *= w[1];
-
-}
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: quantise_WoE()
-  AUTHOR......: Jean-Marc Valin & David Rowe
-  DATE CREATED: 29 Feb 2012
-
-  Experimental joint Wo and LPC energy vector quantiser developed by
-  Jean-Marc Valin.  Exploits correlations between the difference in
-  the log pitch and log energy from frame to frame.  For example
-  both the pitch and energy tend to only change by small amounts
-  during voiced speech, however it is important that these changes be
-  coded carefully.  During unvoiced speech they both change a lot but
-  the ear is less sensitve to errors so coarser quantisation is OK.
-
-  The ear is sensitive to log energy and loq pitch so we quantise in
-  these domains.  That way the error measure used to quantise the
-  values is close to way the ear senses errors.
-
-  See http://jmspeex.livejournal.com/10446.html
-
-\*---------------------------------------------------------------------------*/
-
-void quantise_WoE(C2CONST *c2const, MODEL *model, float *e, float xq[])
-{
-	int          i, n1;
-	float        x[2];
-	float        err[2];
-	float        w[2];
-	const float *codebook1 = ge_cb[0].cb;
-	int          nb_entries = ge_cb[0].m;
-	int          ndim = ge_cb[0].k;
-	float Wo_min = c2const->Wo_min;
-	float Wo_max = c2const->Wo_max;
-	float Fs = c2const->Fs;
-
-	/* VQ is only trained for Fs = 8000 Hz */
-
-	assert(Fs == 8000);
-
-	x[0] = log10f((model->Wo/PI)*4000.0/50.0)/log10f(2);
-	x[1] = 10.0*log10f(1e-4 + *e);
-
-	compute_weights2(x, xq, w);
-	for (i=0; i<ndim; i++)
-		err[i] = x[i]-ge_coeff[i]*xq[i];
-	n1 = find_nearest_weighted(codebook1, nb_entries, err, w, ndim);
-
-	for (i=0; i<ndim; i++)
-	{
-		xq[i] = ge_coeff[i]*xq[i] + codebook1[ndim*n1+i];
-		err[i] -= codebook1[ndim*n1+i];
-	}
-
-	/*
-	  x = log2(4000*Wo/(PI*50));
-	  2^x = 4000*Wo/(PI*50)
-	  Wo = (2^x)*(PI*50)/4000;
-	*/
-
-	model->Wo = powf(2.0, xq[0])*(PI*50.0)/4000.0;
-
-	/* bit errors can make us go out of range leading to all sorts of
-	   probs like seg faults */
-
-	if (model->Wo > Wo_max) model->Wo = Wo_max;
-	if (model->Wo < Wo_min) model->Wo = Wo_min;
-
-	model->L  = PI/model->Wo; /* if we quantise Wo re-compute L */
-
-	*e = POW10F(xq[1]/10.0);
-}
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: encode_WoE()
-  AUTHOR......: Jean-Marc Valin & David Rowe
-  DATE CREATED: 11 May 2012
-
-  Joint Wo and LPC energy vector quantiser developed my Jean-Marc
-  Valin.  Returns index, and updated states xq[].
-
-\*---------------------------------------------------------------------------*/
-
-int encode_WoE(MODEL *model, float e, float xq[])
-{
-	int          i, n1;
-	float        x[2];
-	float        err[2];
-	float        w[2];
-	const float *codebook1 = ge_cb[0].cb;
-	int          nb_entries = ge_cb[0].m;
-	int          ndim = ge_cb[0].k;
-
-	assert((1<<WO_E_BITS) == nb_entries);
-
-	if (e < 0.0) e = 0;  /* occasional small negative energies due LPC round off I guess */
-
-	x[0] = log10f((model->Wo/PI)*4000.0/50.0)/log10f(2);
-	x[1] = 10.0*log10f(1e-4 + e);
-
-	compute_weights2(x, xq, w);
-	for (i=0; i<ndim; i++)
-		err[i] = x[i]-ge_coeff[i]*xq[i];
-	n1 = find_nearest_weighted(codebook1, nb_entries, err, w, ndim);
-
-	for (i=0; i<ndim; i++)
-	{
-		xq[i] = ge_coeff[i]*xq[i] + codebook1[ndim*n1+i];
-		err[i] -= codebook1[ndim*n1+i];
-	}
-
-	//printf("enc: %f %f (%f)(%f) \n", xq[0], xq[1], e, 10.0*log10(1e-4 + e));
-	return n1;
-}
-
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: decode_WoE()
-  AUTHOR......: Jean-Marc Valin & David Rowe
-  DATE CREATED: 11 May 2012
-
-  Joint Wo and LPC energy vector quantiser developed my Jean-Marc
-  Valin.  Given index and states xq[], returns Wo & E, and updates
-  states xq[].
-
-\*---------------------------------------------------------------------------*/
-
-void decode_WoE(C2CONST *c2const, MODEL *model, float *e, float xq[], int n1)
-{
-	int          i;
-	const float *codebook1 = ge_cb[0].cb;
-	int          ndim = ge_cb[0].k;
-	float Wo_min = c2const->Wo_min;
-	float Wo_max = c2const->Wo_max;
-
-	for (i=0; i<ndim; i++)
-	{
-		xq[i] = ge_coeff[i]*xq[i] + codebook1[ndim*n1+i];
-	}
-
-	//printf("dec: %f %f\n", xq[0], xq[1]);
-	model->Wo = powf(2.0, xq[0])*(PI*50.0)/4000.0;
-
-	/* bit errors can make us go out of range leading to all sorts of
-	   probs like seg faults */
-
-	if (model->Wo > Wo_max) model->Wo = Wo_max;
-	if (model->Wo < Wo_min) model->Wo = Wo_min;
-
-	model->L  = PI/model->Wo; /* if we quantise Wo re-compute L */
-
-	*e = POW10F(xq[1]/10.0);
 }

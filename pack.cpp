@@ -44,24 +44,22 @@ static const unsigned int	ShiftRight = 3;
  * compatibility with the rest of the code, indices are always expected to
  * be >= 0.
  */
-void
-pack(
-	unsigned char *	bitArray, /* The output bit string. */
-	unsigned int *		bitIndex, /* Index into the string in BITS, not bytes.*/
-	int			field,	  /* The bit field to be packed. */
-	unsigned int		fieldWidth/* Width of the field in BITS, not bytes. */
+void CQuantize::pack(
+	unsigned char *bitArray,  /* The output bit string. */
+	unsigned int  *bitIndex,  /* Index into the string in BITS, not bytes.*/
+	int			   field,	  /* The bit field to be packed. */
+	unsigned int   fieldWidth /* Width of the field in BITS, not bytes. */
 )
 {
 	pack_natural_or_gray(bitArray, bitIndex, field, fieldWidth, 1);
 }
 
-void
-pack_natural_or_gray(
-	unsigned char *	bitArray,  /* The output bit string. */
-	unsigned int *		bitIndex,  /* Index into the string in BITS, not bytes.*/
-	int			field,	   /* The bit field to be packed. */
-	unsigned int		fieldWidth,/* Width of the field in BITS, not bytes. */
-	unsigned int           gray       /* non-zero for gray coding */
+void CQuantize::pack_natural_or_gray(
+	unsigned char *bitArray,   /* The output bit string. */
+	unsigned int  *bitIndex,   /* Index into the string in BITS, not bytes.*/
+	int			   field,	   /* The bit field to be packed. */
+	unsigned int   fieldWidth, /* Width of the field in BITS, not bytes. */
+	unsigned int   gray        /* non-zero for gray coding */
 )
 {
 	if (gray)
@@ -72,15 +70,12 @@ pack_natural_or_gray(
 
 	do
 	{
-		unsigned int  	bI = *bitIndex;
-		unsigned int	bitsLeft = WordSize - (bI & IndexMask);
-		unsigned int	sliceWidth =
-			bitsLeft < fieldWidth ? bitsLeft : fieldWidth;
-		unsigned int	wordIndex = bI >> ShiftRight;
+		unsigned int bI = *bitIndex;
+		unsigned int bitsLeft = WordSize - (bI & IndexMask);
+		unsigned int sliceWidth = bitsLeft < fieldWidth ? bitsLeft : fieldWidth;
+		unsigned int wordIndex = bI >> ShiftRight;
 
-		bitArray[wordIndex] |=
-			((unsigned char)((field >> (fieldWidth - sliceWidth))
-							 << (bitsLeft - sliceWidth)));
+		bitArray[wordIndex] |= ((unsigned char)((field >> (fieldWidth - sliceWidth)) << (bitsLeft - sliceWidth)));
 
 		*bitIndex = bI + sliceWidth;
 		fieldWidth -= sliceWidth;
@@ -91,11 +86,10 @@ pack_natural_or_gray(
 /** Unpack a field from a bit string, converting from Gray code to binary.
  *
  */
-int
-unpack(
-	const unsigned char *	bitArray, /* The input bit string. */
-	unsigned int *		bitIndex, /* Index into the string in BITS, not bytes.*/
-	unsigned int		fieldWidth/* Width of the field in BITS, not bytes. */
+int CQuantize::unpack(
+	const unsigned char *bitArray, /* The input bit string. */
+	unsigned int        *bitIndex, /* Index into the string in BITS, not bytes.*/
+	unsigned int		 fieldWidth/* Width of the field in BITS, not bytes. */
 )
 {
 	return unpack_natural_or_gray(bitArray, bitIndex, fieldWidth, 1);
@@ -105,12 +99,11 @@ unpack(
  * natural or Gray code.
  *
  */
-int
-unpack_natural_or_gray(
-	const unsigned char *	bitArray,  /* The input bit string. */
-	unsigned int *		bitIndex,  /* Index into the string in BITS, not bytes.*/
-	unsigned int		fieldWidth,/* Width of the field in BITS, not bytes. */
-	unsigned int           gray       /* non-zero for Gray coding */
+int CQuantize::unpack_natural_or_gray(
+	const unsigned char *bitArray,  /* The input bit string. */
+	unsigned int        *bitIndex,  /* Index into the string in BITS, not bytes.*/
+	unsigned int		 fieldWidth,/* Width of the field in BITS, not bytes. */
+	unsigned int         gray       /* non-zero for Gray coding */
 )
 {
 	unsigned int	field = 0;
@@ -118,10 +111,9 @@ unpack_natural_or_gray(
 
 	do
 	{
-		unsigned int  	bI = *bitIndex;
-		unsigned int	bitsLeft = WordSize - (bI & IndexMask);
-		unsigned int	sliceWidth =
-			bitsLeft < fieldWidth ? bitsLeft : fieldWidth;
+		unsigned int bI = *bitIndex;
+		unsigned int bitsLeft = WordSize - (bI & IndexMask);
+		unsigned int sliceWidth = bitsLeft < fieldWidth ? bitsLeft : fieldWidth;
 
 		field |= (((bitArray[bI >> ShiftRight] >> (bitsLeft - sliceWidth)) & ((1 << sliceWidth) - 1)) << (fieldWidth - sliceWidth));
 
