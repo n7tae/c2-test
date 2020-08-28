@@ -53,6 +53,8 @@
 
 #include "debug_alloc.h"
 
+static Cnlp nlp;
+
 /*---------------------------------------------------------------------------* \
 
                              FUNCTION HEADERS
@@ -201,11 +203,7 @@ struct CODEC2 * codec2_create(int mode)
 	}
 	c2->prev_e_dec = 1;
 
-	c2->nlp = nlp_create(&c2->c2const);
-	if (c2->nlp == NULL)
-	{
-		return NULL;
-	}
+	nlp.nlp_create(&c2->c2const);
 
 	c2->lpc_pf = 1;
 	c2->bass_boost = 1;
@@ -361,7 +359,7 @@ void codec2_destroy(struct CODEC2 *c2)
 {
 	assert(c2 != NULL);
 	FREE(c2->bpf_buf);
-	nlp_destroy(c2->nlp);
+	nlp.nlp_destroy();
 	codec2_fft_free(c2->fft_fwd_cfg);
 	codec2_fftr_free(c2->fftr_fwd_cfg);
 	codec2_fftr_free(c2->fftr_inv_cfg);
@@ -2149,7 +2147,7 @@ void analyse_one_frame(struct CODEC2 *c2, MODEL *model, short speech[])
 	dft_speech(&c2->c2const, c2->fft_fwd_cfg, Sw, c2->Sn, c2->w);
 
 	/* Estimate pitch */
-	nlp(c2->nlp, c2->Sn, n_samp, &pitch, Sw, c2->W, &c2->prev_f0_enc);
+	nlp.nlp(c2->Sn, n_samp, &pitch, Sw, c2->W, &c2->prev_f0_enc);
 	model->Wo = TWO_PI/pitch;
 	model->L = PI/model->Wo;
 

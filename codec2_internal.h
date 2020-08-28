@@ -47,7 +47,6 @@ struct CODEC2 {
     float        *bpf_buf;                 /* buffer for band pass filter               */
     float        *Sn;                      /* [m_pitch] input speech                    */
     float         hpf_states[2];           /* high pass filter states                   */
-    void         *nlp;                     /* pitch predictor states                    */
     int           gray;                    /* non-zero for gray encoding                */
 
     codec2_fftr_cfg  fftr_inv_cfg;         /* inverse FFT config                        */
@@ -86,11 +85,11 @@ struct CODEC2 {
     int            eq_en;
 
     /*newamp2 states (also uses newamp1 states )*/
-    float 	   energy_prev;
-    float          n2_rate_K_sample_freqs_kHz[NEWAMP2_K];
-    float          n2_prev_rate_K_vec_[NEWAMP2_K];
-    float          n2_pwb_rate_K_sample_freqs_kHz[NEWAMP2_16K_K];
-    float          n2_pwb_prev_rate_K_vec_[NEWAMP2_16K_K];
+    float energy_prev;
+    float n2_rate_K_sample_freqs_kHz[NEWAMP2_K];
+    float n2_prev_rate_K_vec_[NEWAMP2_K];
+    float n2_pwb_rate_K_sample_freqs_kHz[NEWAMP2_16K_K];
+    float n2_pwb_prev_rate_K_vec_[NEWAMP2_16K_K];
 
     /* used to dump features for deep learning experiments */
     FILE *fmlfeat, *fmlmodel;
