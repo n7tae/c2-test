@@ -747,6 +747,7 @@ float speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[], int m_pi
 	float Wn[m_pitch];
 	float R[order+1];
 	float e, E;
+	Clpc lpc;
 
 	e = 0.0;
 	for(i=0; i<m_pitch; i++)
@@ -764,8 +765,8 @@ float speech_to_uq_lsps(float lsp[], float ak[], float Sn[], float w[], int m_pi
 		return 0.0;
 	}
 
-	autocorrelate(Wn, R, m_pitch, order);
-	levinson_durbin(R, ak, order);
+	lpc.autocorrelate(Wn, R, m_pitch, order);
+	lpc.levinson_durbin(R, ak, order);
 
 	E = 0.0;
 	for(i=0; i<=order; i++)

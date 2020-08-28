@@ -48,7 +48,7 @@
 
 \*---------------------------------------------------------------------------*/
 
-void pre_emp(
+void Clpc::pre_emp(
 	float  Sn_pre[], /* output frame of speech samples                     */
 	float  Sn[],	   /* input frame of speech samples                      */
 	float *mem,      /* Sn[-1]single sample memory                         */
@@ -74,7 +74,7 @@ void pre_emp(
 
 \*---------------------------------------------------------------------------*/
 
-void de_emp(
+void Clpc::de_emp(
 	float  Sn_de[],  /* output frame of speech samples                     */
 	float  Sn[],	   /* input frame of speech samples                      */
 	float *mem,      /* Sn[-1]single sample memory                         */
@@ -100,7 +100,7 @@ void de_emp(
 
 \*---------------------------------------------------------------------------*/
 
-void hanning_window(
+void Clpc::hanning_window(
 	float Sn[],	/* input frame of speech samples */
 	float Wn[],	/* output frame of windowed samples */
 	int Nsam	/* number of samples */
@@ -121,7 +121,7 @@ void hanning_window(
 
 \*---------------------------------------------------------------------------*/
 
-void autocorrelate(
+void Clpc::autocorrelate(
 	float Sn[],	/* frame of Nsam windowed speech samples */
 	float Rn[],	/* array of P+1 autocorrelation coefficients */
 	int Nsam,	/* number of windowed samples to use */
@@ -153,7 +153,7 @@ void autocorrelate(
 
 \*---------------------------------------------------------------------------*/
 
-void levinson_durbin(
+void Clpc::levinson_durbin(
 	float R[],		/* order+1 autocorrelation coeff */
 	float lpcs[],		/* order+1 LPC's */
 	int order		/* order of the LPC analysis */
@@ -198,7 +198,7 @@ void levinson_durbin(
 
 \*---------------------------------------------------------------------------*/
 
-void inverse_filter(
+void Clpc::inverse_filter(
 	float Sn[],	/* Nsam input samples */
 	float a[],	/* LPCs for this frame of samples */
 	int Nsam,	/* number of samples */
@@ -235,7 +235,7 @@ void inverse_filter(
 
 \*---------------------------------------------------------------------------*/
 
-void synthesis_filter(
+void Clpc::synthesis_filter(
 	float res[],	/* Nsam input residual (excitation) samples */
 	float a[],	/* LPCs for this frame of speech samples */
 	int Nsam,	/* number of speech samples */
@@ -264,7 +264,7 @@ void synthesis_filter(
 
 \*---------------------------------------------------------------------------*/
 
-void find_aks(
+void Clpc::find_aks(
 	float Sn[],	/* Nsam samples with order sample memory */
 	float a[],	/* order+1 LPCs with first coeff 1.0 */
 	int Nsam,	/* number of input speech samples */
@@ -297,7 +297,7 @@ void find_aks(
 
 \*---------------------------------------------------------------------------*/
 
-void weight(
+void Clpc::weight(
 	float ak[],	/* vector of order+1 LPCs */
 	float gamma,	/* weighting factor */
 	int order,	/* num LPCs (excluding leading 1.0) */
@@ -309,4 +309,3 @@ void weight(
 	for(i=1; i<=order; i++)
 		akw[i] = ak[i]*powf(gamma,(float)i);
 }
-
