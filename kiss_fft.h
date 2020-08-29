@@ -1,6 +1,8 @@
 #ifndef KISS_FFT_H
 #define KISS_FFT_H
 
+#include <complex>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -19,10 +21,7 @@
   in the tools/ directory.
 */
 
-using kiss_fft_cpx = struct kiss_fft_cpx_tag {
-    float r;
-    float i;
-};
+using kiss_fft_cpx = std::complex<float>;
 
 using kiss_fft_cfg = struct kiss_fft_state *;
 

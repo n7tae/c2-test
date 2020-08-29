@@ -19,11 +19,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 struct kiss_fftr_state
 {
 	kiss_fft_cfg substate;
-	kiss_fft_cpx * tmpbuf;
-	kiss_fft_cpx * super_twiddles;
+	kiss_fft_cpx *tmpbuf;
+	kiss_fft_cpx *super_twiddles;
 };
 
-kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem)
+kiss_fftr_cfg kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *lenmem)
 {
 	int i;
 	kiss_fftr_cfg st = NULL;
@@ -63,12 +63,12 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem,size_t * lenme
 			-3.14159265358979323846264338327 * ((float) (i+1) / nfft + .5);
 		if (inverse_fft)
 			phase *= -1;
-		kf_cexp (st->super_twiddles+i,phase);
+		st->super_twiddles[i] = std::polar(1.0f, phase);
 	}
 	return st;
 }
 
-void kiss_fftr(kiss_fftr_cfg st,const float *timedata,kiss_fft_cpx *freqdata)
+void kiss_fftr(kiss_fftr_cfg st, const float *timedata, kiss_fft_cpx *freqdata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k,ncfft;
@@ -90,35 +90,28 @@ void kiss_fftr(kiss_fftr_cfg st,const float *timedata,kiss_fft_cpx *freqdata)
 	 *      yielding Nyquist bin of input time sequence
 	 */
 
-	tdc.r = st->tmpbuf[0].r;
-	tdc.i = st->tmpbuf[0].i;
-	C_FIXDIV(tdc,2);
-	CHECK_OVERFLOW_OP(tdc.r,+, tdc.i);
-	CHECK_OVERFLOW_OP(tdc.r,-, tdc.i);
-	freqdata[0].r = tdc.r + tdc.i;
-	freqdata[ncfft].r = tdc.r - tdc.i;
-	freqdata[ncfft].i = freqdata[0].i = 0;
+	tdc = st->tmpbuf[0];
+	freqdata[0].real(tdc.real() + tdc.imag());
+	freqdata[ncfft].real(tdc.real() - tdc.imag());
+	freqdata[ncfft].imag(0.f);
+	freqdata[0].imag(0.f);
 
 	for ( k=1; k <= ncfft/2 ; ++k )
 	{
-		fpk    = st->tmpbuf[k];
-		fpnk.r =   st->tmpbuf[ncfft-k].r;
-		fpnk.i = - st->tmpbuf[ncfft-k].i;
-		C_FIXDIV(fpk,2);
-		C_FIXDIV(fpnk,2);
+		fpk = st->tmpbuf[k];
+		fpnk = std::conj(st->tmpbuf[ncfft-k]);
 
-		C_ADD( f1k, fpk, fpnk );
-		C_SUB( f2k, fpk, fpnk );
-		C_MUL( tw, f2k, st->super_twiddles[k-1]);
+		f1k = fpk + fpnk;
+		f2k = fpk - fpnk;
+		tw = f2k * st->super_twiddles[k-1];
 
-		freqdata[k].r = HALF_OF(f1k.r + tw.r);
-		freqdata[k].i = HALF_OF(f1k.i + tw.i);
-		freqdata[ncfft-k].r = HALF_OF(f1k.r - tw.r);
-		freqdata[ncfft-k].i = HALF_OF(tw.i - f1k.i);
+		freqdata[k] = 0.5f * (f1k + tw);
+		freqdata[ncfft-k].real(0.5f * (f1k.real() - tw.real()));
+		freqdata[ncfft-k].imag(0.5f * (tw.imag() - f1k.imag()));
 	}
 }
 
-void kiss_fftri(kiss_fftr_cfg st,const kiss_fft_cpx *freqdata,float *timedata)
+void kiss_fftri(kiss_fftr_cfg st, const kiss_fft_cpx *freqdata, float *timedata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k, ncfft;
@@ -127,25 +120,20 @@ void kiss_fftri(kiss_fftr_cfg st,const kiss_fft_cpx *freqdata,float *timedata)
 
 	ncfft = st->substate->nfft;
 
-	st->tmpbuf[0].r = freqdata[0].r + freqdata[ncfft].r;
-	st->tmpbuf[0].i = freqdata[0].r - freqdata[ncfft].r;
-	C_FIXDIV(st->tmpbuf[0],2);
+	st->tmpbuf[0].real(freqdata[0].real() + freqdata[ncfft].real());
+	st->tmpbuf[0].imag(freqdata[0].real() - freqdata[ncfft].real());
 
 	for (k = 1; k <= ncfft / 2; ++k)
 	{
 		kiss_fft_cpx fk, fnkc, fek, fok, tmp;
 		fk = freqdata[k];
-		fnkc.r = freqdata[ncfft - k].r;
-		fnkc.i = -freqdata[ncfft - k].i;
-		C_FIXDIV( fk, 2 );
-		C_FIXDIV( fnkc, 2 );
+		fnkc = std::conj(freqdata[ncfft - k]);
 
-		C_ADD (fek, fk, fnkc);
-		C_SUB (tmp, fk, fnkc);
-		C_MUL (fok, tmp, st->super_twiddles[k-1]);
-		C_ADD (st->tmpbuf[k],     fek, fok);
-		C_SUB (st->tmpbuf[ncfft - k], fek, fok);
-		st->tmpbuf[ncfft - k].i *= -1;
+		fek = fk + fnkc;
+		tmp = fk - fnkc;
+		fok = tmp * st->super_twiddles[k-1];
+		st->tmpbuf[k] = fek + fok;
+		st->tmpbuf[ncfft - k] = std::conj(fek - fok);
 	}
 	kiss_fft (st->substate, st->tmpbuf, (kiss_fft_cpx *) timedata);
 }
