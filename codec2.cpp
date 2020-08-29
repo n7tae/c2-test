@@ -3159,23 +3159,17 @@ void synthesise(
 
 	/* Overlap add to previous samples */
 
-#ifdef USE_KISS_FFT
-#define    FFTI_FACTOR ((float)1.0)
-#else
-#define    FFTI_FACTOR ((float32_t)FFT_DEC)
-#endif
-
 	for(i=0; i<n_samp-1; i++)
 	{
-		Sn_[i] += sw_[FFT_DEC-n_samp+1+i]*Pn[i] * FFTI_FACTOR;
+		Sn_[i] += sw_[FFT_DEC-n_samp+1+i]*Pn[i];
 	}
 
 	if (shift)
 		for(i=n_samp-1,j=0; i<2*n_samp; i++,j++)
-			Sn_[i] = sw_[j]*Pn[i] * FFTI_FACTOR;
+			Sn_[i] = sw_[j]*Pn[i];
 	else
 		for(i=n_samp-1,j=0; i<2*n_samp; i++,j++)
-			Sn_[i] += sw_[j]*Pn[i] * FFTI_FACTOR;
+			Sn_[i] += sw_[j]*Pn[i];
 }
 
 int codec2_rand(void)

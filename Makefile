@@ -50,3 +50,16 @@ clean:
 	$(RM) $(OBJS) $(DEPS) $(EXES)
 
 -include $(DEPS)
+
+test : $(exes)
+	aplay -f S16_LE test.raw
+	./c2enc 3200 test.raw - | ./c2dec 3200 - - | aplay -f S16_LE
+	./c2enc 2400 test.raw - | ./c2dec 2400 - - | aplay -f S16_LE
+	./c2enc 1600 test.raw - | ./c2dec 1600 - - | aplay -f S16_LE
+	./c2enc 1400 test.raw - | ./c2dec 1400 - - | aplay -f S16_LE
+	./c2enc 1300 test.raw - | ./c2dec 1300 - - | aplay -f S16_LE
+	./c2enc 1200 test.raw - | ./c2dec 1200 - - | aplay -f S16_LE
+	./c2enc 700C test.raw - | ./c2dec 700C - - | aplay -f S16_LE
+	./c2enc  450 test.raw - | ./c2dec  450 - - | aplay -f S16_LE
+	./c2enc  450 test.raw - | ./c2dec 450PWB - - | aplay -r 16000 -f S16_LE
+	aplay -f S16_LE test.raw
