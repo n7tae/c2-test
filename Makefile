@@ -51,7 +51,7 @@ clean:
 
 -include $(DEPS)
 
-test : $(exes)
+test : $(EXES)
 	aplay -f S16_LE test.raw
 	./c2enc 3200 test.raw - | ./c2dec 3200 - - | aplay -f S16_LE
 	./c2enc 2400 test.raw - | ./c2dec 2400 - - | aplay -f S16_LE

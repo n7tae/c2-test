@@ -21,9 +21,6 @@ struct kiss_fftr_state
 	kiss_fft_cfg substate;
 	kiss_fft_cpx * tmpbuf;
 	kiss_fft_cpx * super_twiddles;
-#ifdef USE_SIMD
-	void * pad;
-#endif
 };
 
 kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem)
@@ -44,7 +41,7 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem,size_t * lenme
 
 	if (lenmem == NULL)
 	{
-		st = (kiss_fftr_cfg) KISS_FFT_MALLOC (memneeded);
+		st = (kiss_fftr_cfg) malloc (memneeded);
 	}
 	else
 	{
@@ -71,7 +68,7 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem,size_t * lenme
 	return st;
 }
 
-void kiss_fftr(kiss_fftr_cfg st,const kiss_fft_scalar *timedata,kiss_fft_cpx *freqdata)
+void kiss_fftr(kiss_fftr_cfg st,const float *timedata,kiss_fft_cpx *freqdata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k,ncfft;
@@ -100,11 +97,7 @@ void kiss_fftr(kiss_fftr_cfg st,const kiss_fft_scalar *timedata,kiss_fft_cpx *fr
 	CHECK_OVERFLOW_OP(tdc.r,-, tdc.i);
 	freqdata[0].r = tdc.r + tdc.i;
 	freqdata[ncfft].r = tdc.r - tdc.i;
-#ifdef USE_SIMD
-	freqdata[ncfft].i = freqdata[0].i = _mm_set1_ps(0);
-#else
 	freqdata[ncfft].i = freqdata[0].i = 0;
-#endif
 
 	for ( k=1; k <= ncfft/2 ; ++k )
 	{
@@ -125,7 +118,7 @@ void kiss_fftr(kiss_fftr_cfg st,const kiss_fft_scalar *timedata,kiss_fft_cpx *fr
 	}
 }
 
-void kiss_fftri(kiss_fftr_cfg st,const kiss_fft_cpx *freqdata,kiss_fft_scalar *timedata)
+void kiss_fftri(kiss_fftr_cfg st,const kiss_fft_cpx *freqdata,float *timedata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k, ncfft;
@@ -152,11 +145,7 @@ void kiss_fftri(kiss_fftr_cfg st,const kiss_fft_cpx *freqdata,kiss_fft_scalar *t
 		C_MUL (fok, tmp, st->super_twiddles[k-1]);
 		C_ADD (st->tmpbuf[k],     fek, fok);
 		C_SUB (st->tmpbuf[ncfft - k], fek, fok);
-#ifdef USE_SIMD
-		st->tmpbuf[ncfft - k].i *= _mm_set1_ps(-1.0);
-#else
 		st->tmpbuf[ncfft - k].i *= -1;
-#endif
 	}
 	kiss_fft (st->substate, st->tmpbuf, (kiss_fft_cpx *) timedata);
 }

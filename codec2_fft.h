@@ -18,38 +18,31 @@
 #include "comp.h"
 
 
-typedef COMP    codec2_fft_cpx;
 #include "kiss_fftr.h"
-
 #include "kiss_fft.h"
-typedef kiss_fftr_cfg codec2_fftr_cfg;
-typedef kiss_fft_cfg codec2_fft_cfg;
-typedef kiss_fft_scalar codec2_fft_scalar;
 
-
-
-static inline void codec2_fftr(codec2_fftr_cfg cfg, codec2_fft_scalar* in, codec2_fft_cpx* out)
+static inline void codec2_fftr(kiss_fftr_cfg cfg, float* in, COMP* out)
 {
     kiss_fftr(cfg, in, (kiss_fft_cpx*)out);
 }
 
-static inline void codec2_fftri(codec2_fftr_cfg cfg, codec2_fft_cpx* in, codec2_fft_scalar* out)
+static inline void codec2_fftri(kiss_fftr_cfg cfg, COMP* in, float* out)
 {
     kiss_fftri(cfg, (kiss_fft_cpx*)in, out);
 }
 
-codec2_fft_cfg codec2_fft_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem);
-codec2_fftr_cfg codec2_fftr_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem);
-void codec2_fft_free(codec2_fft_cfg cfg);
-void codec2_fftr_free(codec2_fftr_cfg cfg);
+kiss_fft_cfg codec2_fft_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem);
+kiss_fftr_cfg codec2_fftr_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem);
+void codec2_fft_free(kiss_fft_cfg cfg);
+void codec2_fftr_free(kiss_fftr_cfg cfg);
 
 
-static inline void codec2_fft(codec2_fft_cfg cfg, codec2_fft_cpx* in, codec2_fft_cpx* out)
+static inline void codec2_fft(kiss_fft_cfg cfg, COMP* in, COMP* out)
 {
       kiss_fft(cfg, (kiss_fft_cpx*)in, (kiss_fft_cpx*)out);
 }
 
-void codec2_fft_inplace(codec2_fft_cfg cfg, codec2_fft_cpx* inout);
+void codec2_fft_inplace(kiss_fft_cfg cfg, COMP* inout);
 
 
 #endif

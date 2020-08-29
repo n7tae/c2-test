@@ -45,7 +45,7 @@ class CNewamp2 : public CNewampbase
 public:
 	void n2_mel_sample_freqs_kHz(float rate_K_sample_freqs_kHz[], int K);
 	void newamp2_model_to_indexes(C2CONST *c2const, int indexes[], MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K, float *mean, float rate_K_vec_no_mean[], float rate_K_vec_no_mean_[], int plosiv);
-	void newamp2_indexes_to_model(C2CONST *c2const, MODEL model_[], COMP H[], float interpolated_surface_[], float prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float rate_K_sample_freqs_kHz[], int K, codec2_fft_cfg fwd_cfg, codec2_fft_cfg inv_cfg, int indexes[], float pf_gain, int flag16k);
+	void newamp2_indexes_to_model(C2CONST *c2const, MODEL model_[], COMP H[], float interpolated_surface_[], float prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float rate_K_sample_freqs_kHz[], int K, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg, int indexes[], float pf_gain, int flag16k);
 
 private:
 	void n2_resample_const_rate_f(C2CONST *c2const, MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K);

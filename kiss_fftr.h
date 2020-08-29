@@ -22,17 +22,16 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem, size_t * lenm
 */
 
 
-void kiss_fftr(kiss_fftr_cfg cfg,const kiss_fft_scalar *timedata,kiss_fft_cpx *freqdata);
+void kiss_fftr(kiss_fftr_cfg cfg,const float *timedata,kiss_fft_cpx *freqdata);
 /*
  input timedata has nfft scalar points
  output freqdata has nfft/2+1 complex points
 */
 
-void kiss_fftri(kiss_fftr_cfg cfg,const kiss_fft_cpx *freqdata,kiss_fft_scalar *timedata);
+void kiss_fftri(kiss_fftr_cfg cfg,const kiss_fft_cpx *freqdata,float *timedata);
 /*
  input freqdata has  nfft/2+1 complex points
  output timedata has nfft scalar points
 */
 
-#define kiss_fftr_free free
 #endif

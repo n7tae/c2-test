@@ -11,27 +11,27 @@
 
 #include "_kiss_fft_guts.h"
 
-void codec2_fft_free(codec2_fft_cfg cfg)
+void codec2_fft_free(kiss_fft_cfg cfg)
 {
-	KISS_FFT_FREE(cfg);
+	free(cfg);
 }
 
-codec2_fft_cfg codec2_fft_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem)
+kiss_fft_cfg codec2_fft_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem)
 {
-	codec2_fft_cfg retval;
+	kiss_fft_cfg retval;
 	retval = kiss_fft_alloc(nfft, inverse_fft, mem, lenmem);
 	return retval;
 }
 
-codec2_fftr_cfg codec2_fftr_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem)
+kiss_fftr_cfg codec2_fftr_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem)
 {
-	codec2_fftr_cfg retval;
+	kiss_fftr_cfg retval;
 	retval = kiss_fftr_alloc(nfft, inverse_fft, mem, lenmem);
 	return retval;
 }
-void codec2_fftr_free(codec2_fftr_cfg cfg)
+void codec2_fftr_free(kiss_fftr_cfg cfg)
 {
-	KISS_FFT_FREE(cfg);
+	free(cfg);
 }
 
 // there is a little overhead for inplace kiss_fft but this is
@@ -39,7 +39,7 @@ void codec2_fftr_free(codec2_fftr_cfg cfg)
 // not noticeable
 // the reduced usage of RAM and increased performance on STM32 platforms
 // should be worth it.
-void codec2_fft_inplace(codec2_fft_cfg cfg, codec2_fft_cpx* inout)
+void codec2_fft_inplace(kiss_fft_cfg cfg, COMP* inout)
 {
 	kiss_fft_cpx in[512];
 	// decide whether to use the local stack based buffer for in

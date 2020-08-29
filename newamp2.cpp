@@ -464,7 +464,7 @@ void CNewamp2::newamp2_interpolate(float interpolated_surface_[], float left_vec
 
 \*---------------------------------------------------------------------------*/
 
-void CNewamp2::newamp2_indexes_to_model(C2CONST *c2const, MODEL model_[], COMP H[], float *interpolated_surface_, float prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float rate_K_sample_freqs_kHz[], int K, codec2_fft_cfg fwd_cfg, codec2_fft_cfg inv_cfg, int indexes[], float pf_gain, int flag16k)
+void CNewamp2::newamp2_indexes_to_model(C2CONST *c2const, MODEL model_[], COMP H[], float *interpolated_surface_, float prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float rate_K_sample_freqs_kHz[], int K, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg, int indexes[], float pf_gain, int flag16k)
 {
 	float rate_K_vec_[K], rate_K_vec_no_mean_[K], mean_, Wo_right;
 	int   voicing_right, k;
