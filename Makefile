@@ -35,10 +35,10 @@ EXES = c2dec c2enc
 
 all : $(EXES)
 
-c2dec : c2dec.o codec2.o dump.o kiss_fftr.o mbest.o sine.o lpc.o nlp.o newamp1.o pack.o postfilter.o codec2_fft.o kiss_fft.o lsp.o newamp2.o quantise.o interp.o codebooknewamp1.o codebooknewamp1_energy.o codebooknewamp2.o codebooknewamp2_energy.o codebook.o  codebookd.o  codebookdt.o codebookjvm.o  codebookres.o  codebookvq.o codebookge.o newampbase.o qbase.o
+c2dec : c2dec.o codec2.o dump.o kiss_fftr.o mbest.o sine.o lpc.o nlp.o newamp1.o pack.o codec2_fft.o kiss_fft.o lsp.o newamp2.o quantise.o interp.o codebooknewamp1.o codebooknewamp1_energy.o codebooknewamp2.o codebooknewamp2_energy.o codebook.o  codebookd.o  codebookdt.o codebookjvm.o  codebookres.o  codebookvq.o codebookge.o newampbase.o qbase.o
 	g++ -o $@ $^ $(LDFLAGS)
 
-c2enc : c2enc.o  codec2.o kiss_fftr.o mbest.o sine.o dump.o lpc.o nlp.o newamp1.o pack.o postfilter.o codec2_fft.o kiss_fft.o lsp.o newamp2.o quantise.o interp.o codebooknewamp1.o codebooknewamp1_energy.o codebooknewamp2.o codebooknewamp2_energy.o codebook.o  codebookd.o  codebookdt.o codebookjvm.o  codebookres.o  codebookvq.o codebookge.o newampbase.o qbase.o
+c2enc : c2enc.o  codec2.o kiss_fftr.o mbest.o sine.o dump.o lpc.o nlp.o newamp1.o pack.o codec2_fft.o kiss_fft.o lsp.o newamp2.o quantise.o interp.o codebooknewamp1.o codebooknewamp1_energy.o codebooknewamp2.o codebooknewamp2_energy.o codebook.o  codebookd.o  codebookdt.o codebookjvm.o  codebookres.o  codebookvq.o codebookge.o newampbase.o qbase.o
 	g++ -o $@ $^ $(LDFLAGS)
 
 %.o : %.cpp

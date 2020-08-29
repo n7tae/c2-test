@@ -112,7 +112,9 @@ float *codec2_enable_user_ratek(struct CODEC2 *codec2_state, int *K);
 void codec2_700c_post_filter(struct CODEC2 *codec2_state, int en);
 void codec2_700c_eq(struct CODEC2 *codec2_state, int en);
 
+// merged from other files
 void sample_phase(MODEL *model, COMP filter_phase[], COMP A[]);
 void phase_synth_zero_order(int n_samp, MODEL *model, float *ex_phase, COMP filter_phase[]);
+void postfilter(MODEL *model, float *bg_est);
 
 #endif
