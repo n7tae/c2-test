@@ -17,7 +17,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
    and defines
    typedef struct { float r; float i; }kiss_fft_cpx; */
 #include "kiss_fft.h"
-#include <limits.h>
 
 #define MAXFACTORS 32
 /* e.g. an fft of length 128 has 4 factors
@@ -31,62 +30,3 @@ struct kiss_fft_state {
     int factors[2*MAXFACTORS];
     kiss_fft_cpx twiddles[1];
 };
-
-/*
-  Explanation of macros dealing with complex math:
-
-   C_MUL(m,a,b)         : m = a*b
-   C_FIXDIV( c , div )  : if a fixed point impl., c /= div. noop otherwise
-   C_SUB( res, a,b)     : res = a - b
-   C_SUBFROM( res , a)  : res -= a
-   C_ADDTO( res , a)    : res += a
- * */
-// #define S_MUL(a,b) ( (a)*(b) )
-// #define C_MUL(m,a,b) \
-//     do{ (m).r = (a).r*(b).r - (a).i*(b).i;\
-//         (m).i = (a).r*(b).i + (a).i*(b).r; }while(0)
-// #define C_FIXDIV(c,div) /* NOOP */
-// #define C_MULBYSCALAR( c, s ) \
-//     do{ (c).r *= (s);\
-//         (c).i *= (s); }while(0)
-
-// #ifndef CHECK_OVERFLOW_OP
-// #  define CHECK_OVERFLOW_OP(a,op,b) /* noop */
-// #endif
-
-// #define  C_ADD( res, a,b)\
-//     do { \
-// 	    CHECK_OVERFLOW_OP((a).r,+,(b).r)\
-// 	    CHECK_OVERFLOW_OP((a).i,+,(b).i)\
-// 	    (res).r=(a).r+(b).r;  (res).i=(a).i+(b).i; \
-//     }while(0)
-// #define  C_SUB( res, a,b)\
-//     do { \
-// 	    CHECK_OVERFLOW_OP((a).r,-,(b).r)\
-// 	    CHECK_OVERFLOW_OP((a).i,-,(b).i)\
-// 	    (res).r=(a).r-(b).r;  (res).i=(a).i-(b).i; \
-//     }while(0)
-// #define C_ADDTO( res , a)\
-//     do { \
-// 	    CHECK_OVERFLOW_OP((res).r,+,(a).r)\
-// 	    CHECK_OVERFLOW_OP((res).i,+,(a).i)\
-// 	    (res).r += (a).r;  (res).i += (a).i;\
-//     }while(0)
-
-// #define C_SUBFROM( res , a)\
-//     do {\
-// 	    CHECK_OVERFLOW_OP((res).r,-,(a).r)\
-// 	    CHECK_OVERFLOW_OP((res).i,-,(a).i)\
-// 	    (res).r -= (a).r;  (res).i -= (a).i; \
-//     }while(0)
-
-
-// #define KISS_FFT_COS(phase) (float) cosf(phase)
-// #define KISS_FFT_SIN(phase) (float) sinf(phase)
-// #define HALF_OF(x) ((x)*.5)
-
-// #define  kf_cexp(x,phase) \
-// 	do{ \
-// 		(x)->r = KISS_FFT_COS(phase);\
-// 		(x)->i = KISS_FFT_SIN(phase);\
-// 	}while(0)
