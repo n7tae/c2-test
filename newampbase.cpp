@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <math.h>
 
-#include "phase.h"
 #include "newampbase.h"
 
 /*---------------------------------------------------------------------------*\
@@ -232,5 +231,82 @@ void CNewampbase::determine_phase(C2CONST *c2const, COMP H[], MODEL *model, int 
 		b = floorf(0.5+m*model->Wo*Nfft/(2.0*M_PI));
 		H[m].real = cosf(phase[b]);
 		H[m].imag = sinf(phase[b]);
+	}
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: mag_to_phase
+  AUTHOR......: David Rowe
+  DATE CREATED: Jan 2017
+
+  Algorithm for http://www.dsprelated.com/showcode/20.php ported to C.  See
+  also Octave function mag_to_phase.m
+
+  Given a magnitude spectrum in dB, returns a minimum-phase phase
+  spectra.
+
+\*---------------------------------------------------------------------------*/
+
+void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples in radians       */
+				  float Gdbfk[],              /* Nfft/2+1 postive freq amplitudes samples in dB */
+				  int Nfft,
+				  codec2_fft_cfg fft_fwd_cfg,
+				  codec2_fft_cfg fft_inv_cfg
+				 )
+{
+	COMP Sdb[Nfft], c[Nfft], cf[Nfft], Cf[Nfft];
+	int  Ns = Nfft/2+1;
+	int  i;
+
+	/* install negative frequency components, 1/Nfft takes into
+	   account kiss fft lack of scaling on ifft */
+
+	Sdb[0].real = Gdbfk[0];
+	Sdb[0].imag = 0.0;
+	for(i=1; i<Ns; i++)
+	{
+		Sdb[i].real = Sdb[Nfft-i].real = Gdbfk[i];
+		Sdb[i].imag = Sdb[Nfft-i].imag = 0.0;
+	}
+
+	/* compute real cepstrum from log magnitude spectrum */
+
+	codec2_fft(fft_inv_cfg, Sdb, c);
+	for(i=0; i<Nfft; i++)
+	{
+		c[i].real /= (float)Nfft;
+		c[i].imag /= (float)Nfft;
+	}
+
+	/* Fold cepstrum to reflect non-min-phase zeros inside unit circle */
+
+	cf[0] = c[0];
+	for(i=1; i<Ns-1; i++)
+	{
+		auto j = Nfft - i;
+		cf[i].real = c[i].real + c[j].real;
+		cf[i].imag = c[i].imag + c[j].imag;
+	}
+	cf[Ns-1] = c[Ns-1];
+	for(i=Ns; i<Nfft; i++)
+	{
+		cf[i].real = 0.0;
+		cf[i].imag = 0.0;
+	}
+
+	/* Cf = dB_magnitude + j * minimum_phase */
+
+	codec2_fft(fft_fwd_cfg, cf, Cf);
+
+	/*  The maths says we are meant to be using log(x), not 20*log10(x),
+	    so we need to scale the phase to account for this:
+	    log(x) = 20*log10(x)/scale */
+
+	float scale = (20.0/logf(10.0));
+
+	for(i=0; i<Ns; i++)
+	{
+		phase[i] = Cf[i].imag/scale;
 	}
 }

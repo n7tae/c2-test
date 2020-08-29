@@ -37,7 +37,6 @@
 #include "lpc.h"
 #include "lsp.h"
 #include "codec2_fft.h"
-#include "phase.h"
 #include "mbest.h"
 
 #undef PROFILE

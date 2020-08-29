@@ -29,6 +29,8 @@
 #ifndef __CODEC2__
 #define  __CODEC2__
 
+#include "defines.h"
+#include "comp.h"
 #include "version.h"
 
 #define CODEC2_MODE_3200 	0
@@ -109,5 +111,8 @@ float *codec2_enable_user_ratek(struct CODEC2 *codec2_state, int *K);
 // 700C post filter and equaliser
 void codec2_700c_post_filter(struct CODEC2 *codec2_state, int en);
 void codec2_700c_eq(struct CODEC2 *codec2_state, int en);
+
+void sample_phase(MODEL *model, COMP filter_phase[], COMP A[]);
+void phase_synth_zero_order(int n_samp, MODEL *model, float *ex_phase, COMP filter_phase[]);
 
 #endif

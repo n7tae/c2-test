@@ -35,7 +35,6 @@
 #include <math.h>
 
 #include "defines.h"
-#include "phase.h"
 #include "quantise.h"
 #include "mbest.h"
 #include "newamp1.h"

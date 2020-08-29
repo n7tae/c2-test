@@ -40,7 +40,6 @@
 #include "dump.h"
 #include "lpc.h"
 #include "quantise.h"
-#include "phase.h"
 #include "interp.h"
 #include "postfilter.h"
 #include "codec2.h"
@@ -2314,4 +2313,185 @@ void codec2_700c_eq(struct CODEC2 *codec2_state, int en)
 	codec2_state->eq_en = en;
 	codec2_state->se = 0.0;
 	codec2_state->nse = 0;
+}
+/*---------------------------------------------------------------------------*\
+
+  sample_phase()
+
+  Samples phase at centre of each harmonic from and array of FFT_ENC
+  DFT samples.
+
+\*---------------------------------------------------------------------------*/
+
+void sample_phase(MODEL *model,
+				  COMP H[],
+				  COMP A[]        /* LPC analysis filter in freq domain */
+)
+{
+	int   m, b;
+	float r;
+
+	r = TWO_PI/(FFT_ENC);
+
+	/* Sample phase at harmonics */
+
+	for(m=1; m<=model->L; m++)
+	{
+		b = (int)(m*model->Wo/r + 0.5);
+		H[m].real = A[b].real;
+		H[m].imag - -A[b].imag;
+	}
+}
+
+
+/*---------------------------------------------------------------------------*\
+
+   phase_synth_zero_order()
+
+   Synthesises phases based on SNR and a rule based approach.  No phase
+   parameters are required apart from the SNR (which can be reduced to a
+   1 bit V/UV decision per frame).
+
+   The phase of each harmonic is modelled as the phase of a synthesis
+   filter excited by an impulse.  In many Codec 2 modes the synthesis
+   filter is a LPC filter. Unlike the first order model the position
+   of the impulse is not transmitted, so we create an excitation pulse
+   train using a rule based approach.
+
+   Consider a pulse train with a pulse starting time n=0, with pulses
+   repeated at a rate of Wo, the fundamental frequency.  A pulse train
+   in the time domain is equivalent to harmonics in the frequency
+   domain.  We can make an excitation pulse train using a sum of
+   sinsusoids:
+
+     for(m=1; m<=L; m++)
+       ex[n] = cos(m*Wo*n)
+
+   Note: the Octave script ../octave/phase.m is an example of this if
+   you would like to try making a pulse train.
+
+   The phase of each excitation harmonic is:
+
+     arg(E[m]) = mWo
+
+   where E[m] are the complex excitation (freq domain) samples,
+   arg(x), just returns the phase of a complex sample x.
+
+   As we don't transmit the pulse position for this model, we need to
+   synthesise it.  Now the excitation pulses occur at a rate of Wo.
+   This means the phase of the first harmonic advances by N_SAMP samples
+   over a synthesis frame of N_SAMP samples.  For example if Wo is pi/20
+   (200 Hz), then over a 10ms frame (N_SAMP=80 samples), the phase of the
+   first harmonic would advance (pi/20)*80 = 4*pi or two complete
+   cycles.
+
+   We generate the excitation phase of the fundamental (first
+   harmonic):
+
+     arg[E[1]] = Wo*N_SAMP;
+
+   We then relate the phase of the m-th excitation harmonic to the
+   phase of the fundamental as:
+
+     arg(E[m]) = m*arg(E[1])
+
+   This E[m] then gets passed through the LPC synthesis filter to
+   determine the final harmonic phase.
+
+   Comparing to speech synthesised using original phases:
+
+   - Through headphones speech synthesised with this model is not as
+     good. Through a loudspeaker it is very close to original phases.
+
+   - If there are voicing errors, the speech can sound clicky or
+     staticy.  If V speech is mistakenly declared UV, this model tends to
+     synthesise impulses or clicks, as there is usually very little shift or
+     dispersion through the LPC synthesis filter.
+
+   - When combined with LPC amplitude modelling there is an additional
+     drop in quality.  I am not sure why, theory is interformant energy
+     is raised making any phase errors more obvious.
+
+   NOTES:
+
+     1/ This synthesis model is effectively the same as a simple LPC-10
+     vocoders, and yet sounds much better.  Why? Conventional wisdom
+     (AMBE, MELP) says mixed voicing is required for high quality
+     speech.
+
+     2/ I am pretty sure the Lincoln Lab sinusoidal coding guys (like xMBE
+     also from MIT) first described this zero phase model, I need to look
+     up the paper.
+
+     3/ Note that this approach could cause some discontinuities in
+     the phase at the edge of synthesis frames, as no attempt is made
+     to make sure that the phase tracks are continuous (the excitation
+     phases are continuous, but not the final phases after filtering
+     by the LPC spectra).  Technically this is a bad thing.  However
+     this may actually be a good thing, disturbing the phase tracks a
+     bit.  More research needed, e.g. test a synthesis model that adds
+     a small delta-W to make phase tracks line up for voiced
+     harmonics.
+
+\*---------------------------------------------------------------------------*/
+
+void phase_synth_zero_order(
+	int    n_samp,
+	MODEL *model,
+	float *ex_phase,            /* excitation phase of fundamental        */
+	COMP   H[]                  /* L synthesis filter freq domain samples */
+
+)
+{
+	int   m;
+	float new_phi;
+	COMP  Ex[MAX_AMP+1];	  /* excitation samples */
+	COMP  A_[MAX_AMP+1];	  /* synthesised harmonic samples */
+
+	/*
+	   Update excitation fundamental phase track, this sets the position
+	   of each pitch pulse during voiced speech.  After much experiment
+	   I found that using just this frame's Wo improved quality for UV
+	   sounds compared to interpolating two frames Wo like this:
+
+	   ex_phase[0] += (*prev_Wo+model->Wo)*N_SAMP/2;
+	*/
+
+	ex_phase[0] += (model->Wo)*n_samp;
+	ex_phase[0] -= TWO_PI*floorf(ex_phase[0]/TWO_PI + 0.5);
+
+	for(m=1; m<=model->L; m++)
+	{
+
+		/* generate excitation */
+
+		if (model->voiced)
+		{
+
+			Ex[m].real = cosf(ex_phase[0]*m);
+			Ex[m].imag = sinf(ex_phase[0]*m);
+		}
+		else
+		{
+
+			/* When a few samples were tested I found that LPC filter
+			   phase is not needed in the unvoiced case, but no harm in
+			   keeping it.
+			*/
+			float phi = TWO_PI*(float)codec2_rand()/CODEC2_RAND_MAX;
+			Ex[m].real = cosf(phi);
+			Ex[m].imag = sinf(phi);
+		}
+
+		/* filter using LPC filter */
+
+		A_[m].real = H[m].real*Ex[m].real - H[m].imag*Ex[m].imag;
+		A_[m].imag = H[m].imag*Ex[m].real + H[m].real*Ex[m].imag;
+
+		/* modify sinusoidal phase */
+
+		new_phi = atan2f(A_[m].imag, A_[m].real+1E-12);
+		model->phi[m] = new_phi;
+	}
+
 }
