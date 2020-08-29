@@ -380,7 +380,7 @@ void CNewamp1::newamp1_indexes_to_model(C2CONST *c2const, MODEL model_[], COMP H
 
 	interp_Wo_v(aWo_, aL_, avoicing_, *Wo_left, Wo_right, *voicing_left, voicing_right);
 
-	/* back to rate L amplitudes, synthesise phase for each frame */
+	/* back to rate L amplitudes, Synthesise phase for each frame */
 
 	for(i=0; i<M; i++)
 	{

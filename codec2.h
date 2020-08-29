@@ -31,6 +31,7 @@
 
 #include "defines.h"
 #include "comp.h"
+#include "codec2_fft.h"
 #include "version.h"
 
 #define CODEC2_MODE_3200 	0
@@ -46,6 +47,8 @@
 #ifndef CODEC2_MODE_EN_DEFAULT
 #define CODEC2_MODE_EN_DEFAULT 1
 #endif
+
+#define CODEC2_RAND_MAX 32767
 
 // by default we enable all modes
 // disable during compile time with -DCODEC2_MODE_1600_EN=0
@@ -116,5 +119,17 @@ void codec2_700c_eq(struct CODEC2 *codec2_state, int en);
 void sample_phase(MODEL *model, COMP filter_phase[], COMP A[]);
 void phase_synth_zero_order(int n_samp, MODEL *model, float *ex_phase, COMP filter_phase[]);
 void postfilter(MODEL *model, float *bg_est);
+
+C2CONST c2const_create(int Fs, float framelength_ms);
+
+void make_analysis_window(C2CONST *c2const, codec2_fft_cfg fft_fwd_cfg, float w[], float W[]);
+void dft_speech(C2CONST *c2const, codec2_fft_cfg fft_fwd_cfg, COMP Sw[], float Sn[], float w[]);
+void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, COMP Sw[]);
+void estimate_amplitudes(MODEL *model, COMP Sw[], float W[], int est_phase);
+float est_voicing_mbe(C2CONST *c2const, MODEL *model, COMP Sw[], float W[]);
+void make_synthesis_window(C2CONST *c2const, float Pn[]);
+void synthesise(int n_samp, codec2_fftr_cfg fftr_inv_cfg, float Sn_[], MODEL *model, float Pn[], int shift);
+int codec2_rand(void);
+void hs_pitch_refinement(MODEL *model, COMP Sw[], float pmin, float pmax, float pstep);
 
 #endif
