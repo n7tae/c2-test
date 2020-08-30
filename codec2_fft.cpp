@@ -6,10 +6,7 @@
  */
 
 #include "codec2_fft.h"
-
 #include "debug_alloc.h"
-
-#include "_kiss_fft_guts.h"
 
 void codec2_fft_free(kiss_fft_cfg cfg)
 {

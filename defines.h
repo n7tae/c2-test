@@ -28,6 +28,8 @@
 #ifndef __DEFINES__
 #define __DEFINES__
 
+#include <complex>
+
 /*---------------------------------------------------------------------------*\
 
 				DEFINES
@@ -38,24 +40,26 @@
 
 #define N_S        0.01         /* internal proc frame length in secs   */
 #define TW_S       0.005        /* trapezoidal synth window overlap     */
-#define MAX_AMP    160		/* maximum number of harmonics          */
+#define MAX_AMP    160			/* maximum number of harmonics          */
 #ifndef PI
 #define PI         3.141592654	/* mathematical constant                */
 #endif
 #define TWO_PI     6.283185307	/* mathematical constant                */
 #define MAX_STR    2048         /* maximum string size                  */
 
-#define FFT_ENC    512		/* size of FFT used for encoder         */
+#define FFT_ENC    512			/* size of FFT used for encoder         */
 #define FFT_DEC    512	    	/* size of FFT used in decoder          */
 #define V_THRESH   6.0          /* voicing threshold in dB              */
-#define LPC_ORD    10		/* LPC order                            */
-#define LPC_ORD_LOW 6		/* LPC order for lower rates            */
+#define LPC_ORD    10			/* LPC order                            */
+#define LPC_ORD_LOW 6			/* LPC order for lower rates            */
 
 /* Pitch estimation defines */
 
 #define M_PITCH_S  0.0400       /* pitch analysis window in s           */
-#define P_MIN_S    0.0025	/* minimum pitch period in s            */
-#define P_MAX_S    0.0200	/* maximum pitch period in s            */
+#define P_MIN_S    0.0025		/* minimum pitch period in s            */
+#define P_MAX_S    0.0200		/* maximum pitch period in s            */
+#define MAXFACTORS 32			// e.g. an fft of length 128 has 4 factors
+ 								// as far as kissfft is concerned 4*4*4*2
 
 /*---------------------------------------------------------------------------*\
 
@@ -88,6 +92,8 @@ using MODEL = struct model_tag {
     int   voiced;	  /* non-zero if this frame is voiced           */
 };
 
+using kiss_fft_cpx = std::complex<float>;
+
 /* describes each codebook  */
 
 struct lsp_codebook {
@@ -96,6 +102,15 @@ struct lsp_codebook {
 	int     m; /* elements in codebook */
 	float *cb; /* The elements         */
 };
+
+struct kiss_fft_state {
+    int nfft;
+    int inverse;
+    int factors[2*MAXFACTORS];
+    kiss_fft_cpx twiddles[1];
+};
+
+using kiss_fft_cfg = struct kiss_fft_state *;
 
 extern const struct lsp_codebook lsp_cb[];
 extern const struct lsp_codebook lsp_cbd[];
