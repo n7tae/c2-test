@@ -39,8 +39,8 @@ struct CODEC2 {
     int           Fs;
     int           n_samp;
     int           m_pitch;
-    kiss_fft_cfg  fft_fwd_cfg;           /* forward FFT config                        */
-    kiss_fftr_cfg fftr_fwd_cfg;          /* forward real FFT config                   */
+    kiss_fft_state * fft_fwd_cfg;           /* forward FFT config                        */
+    kiss_fftr_state *fftr_fwd_cfg;          /* forward real FFT config                   */
     float        *w;	                   /* [m_pitch] time domain hamming window      */
     float         W[FFT_ENC];	           /* DFT of w[]                                */
     float        *Pn;	                   /* [2*n_samp] trapezoidal synthesis window   */
@@ -49,7 +49,7 @@ struct CODEC2 {
     float         hpf_states[2];           /* high pass filter states                   */
     int           gray;                    /* non-zero for gray encoding                */
 
-    kiss_fftr_cfg  fftr_inv_cfg;         /* inverse FFT config                        */
+    kiss_fftr_state * fftr_inv_cfg;         /* inverse FFT config                        */
     float        *Sn_;	                   /* [2*n_samp] synthesised output speech      */
     float         ex_phase;                /* excitation model phase track              */
     float         bg_est;                  /* background noise estimate for post filter */
@@ -75,8 +75,8 @@ struct CODEC2 {
     float          prev_rate_K_vec_[NEWAMP1_K];
     float          Wo_left;
     int            voicing_left;
-    kiss_fft_cfg phase_fft_fwd_cfg;
-    kiss_fft_cfg phase_fft_inv_cfg;
+    kiss_fft_state *phase_fft_fwd_cfg;
+    kiss_fft_state *phase_fft_inv_cfg;
     float          se;                       /* running sum of squared error */
     unsigned int   nse;                      /* number of terms in sum       */
     float         *user_rate_K_vec_no_mean_; /* optional, user supplied vector for quantisation experiments */

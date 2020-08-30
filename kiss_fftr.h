@@ -7,14 +7,10 @@
 
  Real optimized version can save about 45% cpu time vs. complex fft of a real seq.
 
-
-
  */
 
-typedef struct kiss_fftr_state *kiss_fftr_cfg;
 
-
-kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem, size_t * lenmem);
+kiss_fftr_state *kiss_fftr_alloc(int nfft,int inverse_fft,void * mem, size_t * lenmem);
 /*
  nfft must be even
 
@@ -22,13 +18,13 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem, size_t * lenm
 */
 
 
-void kiss_fftr(kiss_fftr_cfg cfg,const float *timedata,kiss_fft_cpx *freqdata);
+void kiss_fftr(kiss_fftr_state *cfg,const float *timedata,kiss_fft_cpx *freqdata);
 /*
  input timedata has nfft scalar points
  output freqdata has nfft/2+1 complex points
 */
 
-void kiss_fftri(kiss_fftr_cfg cfg,const kiss_fft_cpx *freqdata,float *timedata);
+void kiss_fftri(kiss_fftr_state *cfg,const kiss_fft_cpx *freqdata,float *timedata);
 /*
  input freqdata has  nfft/2+1 complex points
  output timedata has nfft scalar points

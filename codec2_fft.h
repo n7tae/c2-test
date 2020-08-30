@@ -20,28 +20,27 @@
 #include "kiss_fftr.h"
 #include "kiss_fft.h"
 
-static inline void codec2_fftr(kiss_fftr_cfg cfg, float* in, std::complex<float>* out)
+static inline void codec2_fftr(kiss_fftr_state *cfg, float *in, std::complex<float> *out)
 {
-    kiss_fftr(cfg, in, (kiss_fft_cpx*)out);
+    kiss_fftr(cfg, in, out);
 }
 
-static inline void codec2_fftri(kiss_fftr_cfg cfg, std::complex<float>* in, float* out)
+static inline void codec2_fftri(kiss_fftr_state *cfg, std::complex<float> *in, float *out)
 {
-    kiss_fftri(cfg, (kiss_fft_cpx*)in, out);
+    kiss_fftri(cfg, in, out);
 }
 
-kiss_fft_cfg codec2_fft_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem);
-kiss_fftr_cfg codec2_fftr_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem);
-void codec2_fft_free(kiss_fft_cfg cfg);
-void codec2_fftr_free(kiss_fftr_cfg cfg);
+kiss_fft_state *codec2_fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem);
+kiss_fftr_state *codec2_fftr_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem);
+void codec2_fft_free(kiss_fft_state *cfg);
+void codec2_fftr_free(kiss_fftr_state *cfg);
 
 
-static inline void codec2_fft(kiss_fft_cfg cfg, std::complex<float>* in, std::complex<float>* out)
+static inline void codec2_fft(kiss_fft_state *cfg, std::complex<float> *in, std::complex<float> *out)
 {
-      kiss_fft(cfg, (kiss_fft_cpx*)in, (kiss_fft_cpx*)out);
+      kiss_fft(cfg, in, out);
 }
 
-void codec2_fft_inplace(kiss_fft_cfg cfg, std::complex<float>* inout);
-
+void codec2_fft_inplace(kiss_fft_state *cfg, std::complex<float> *inout);
 
 #endif

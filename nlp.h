@@ -65,7 +65,7 @@ using NLP = struct nlp_tag
 	float         sq[PMAX_M];	     /* squared speech samples       */
 	float         mem_x,mem_y;       /* memory for notch filter      */
 	float         mem_fir[NLP_NTAP]; /* decimation FIR filter memory */
-	kiss_fft_cfg  fft_cfg;         /* kiss FFT config              */
+	kiss_fft_state * fft_cfg;         /* kiss FFT config              */
 	std::vector<float> Sn16k;	     /* Fs=16kHz input speech vector */
 };
 

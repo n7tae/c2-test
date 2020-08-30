@@ -16,17 +16,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "kiss_fftr.h"
 #include "assert.h"
 
-struct kiss_fftr_state
-{
-	kiss_fft_cfg substate;
-	kiss_fft_cpx *tmpbuf;
-	kiss_fft_cpx *super_twiddles;
-};
-
-kiss_fftr_cfg kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *lenmem)
+kiss_fftr_state *kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *lenmem)
 {
 	int i;
-	kiss_fftr_cfg st = NULL;
+	kiss_fftr_state *st = NULL;
 	size_t subsize, memneeded;
 
 	if (nfft & 1)
@@ -41,18 +34,18 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *len
 
 	if (lenmem == NULL)
 	{
-		st = (kiss_fftr_cfg) malloc (memneeded);
+		st = (kiss_fftr_state *)malloc(memneeded);
 	}
 	else
 	{
 		if (*lenmem >= memneeded)
-			st = (kiss_fftr_cfg) mem;
+			st = (kiss_fftr_state *)mem;
 		*lenmem = memneeded;
 	}
 	if (!st)
 		return NULL;
 
-	st->substate = (kiss_fft_cfg) (st + 1); /*just beyond kiss_fftr_state struct */
+	st->substate = (kiss_fft_state *)(st + 1); /*just beyond kiss_fftr_state struct */
 	st->tmpbuf = (kiss_fft_cpx *) (((char *) st->substate) + subsize);
 	st->super_twiddles = st->tmpbuf + nfft;
 	kiss_fft_alloc(nfft, inverse_fft, st->substate, &subsize);
@@ -68,7 +61,7 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *len
 	return st;
 }
 
-void kiss_fftr(kiss_fftr_cfg st, const float *timedata, kiss_fft_cpx *freqdata)
+void kiss_fftr(kiss_fftr_state *st, const float *timedata, kiss_fft_cpx *freqdata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k,ncfft;
@@ -111,7 +104,7 @@ void kiss_fftr(kiss_fftr_cfg st, const float *timedata, kiss_fft_cpx *freqdata)
 	}
 }
 
-void kiss_fftri(kiss_fftr_cfg st, const kiss_fft_cpx *freqdata, float *timedata)
+void kiss_fftri(kiss_fftr_state *st, const kiss_fft_cpx *freqdata, float *timedata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k, ncfft;

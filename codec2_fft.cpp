@@ -8,25 +8,21 @@
 #include "codec2_fft.h"
 #include "debug_alloc.h"
 
-void codec2_fft_free(kiss_fft_cfg cfg)
+void codec2_fft_free(kiss_fft_state *cfg)
 {
 	free(cfg);
 }
 
-kiss_fft_cfg codec2_fft_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem)
+kiss_fft_state *codec2_fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
 {
-	kiss_fft_cfg retval;
-	retval = kiss_fft_alloc(nfft, inverse_fft, mem, lenmem);
-	return retval;
+	return kiss_fft_alloc(nfft, inverse_fft, mem, lenmem);
 }
 
-kiss_fftr_cfg codec2_fftr_alloc(int nfft, int inverse_fft, void* mem, size_t* lenmem)
+kiss_fftr_state *codec2_fftr_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
 {
-	kiss_fftr_cfg retval;
-	retval = kiss_fftr_alloc(nfft, inverse_fft, mem, lenmem);
-	return retval;
+	return kiss_fftr_alloc(nfft, inverse_fft, mem, lenmem);
 }
-void codec2_fftr_free(kiss_fftr_cfg cfg)
+void codec2_fftr_free(kiss_fftr_state *cfg)
 {
 	free(cfg);
 }
@@ -36,7 +32,7 @@ void codec2_fftr_free(kiss_fftr_cfg cfg)
 // not noticeable
 // the reduced usage of RAM and increased performance on STM32 platforms
 // should be worth it.
-void codec2_fft_inplace(kiss_fft_cfg cfg, std::complex<float>* inout)
+void codec2_fft_inplace(kiss_fft_state *cfg, std::complex<float> *inout)
 {
 	kiss_fft_cpx in[512];
 	// decide whether to use the local stack based buffer for in
@@ -45,11 +41,11 @@ void codec2_fft_inplace(kiss_fft_cfg cfg, std::complex<float>* inout)
 	// is much faster and uses less RAM
 	if (cfg->nfft <= 512)
 	{
-		memcpy(in,inout,cfg->nfft*sizeof(kiss_fft_cpx));
-		kiss_fft(cfg, in, (kiss_fft_cpx*)inout);
+		memcpy(in, inout, cfg->nfft*sizeof(kiss_fft_cpx));
+		kiss_fft(cfg, in, inout);
 	}
 	else
 	{
-		kiss_fft(cfg, (kiss_fft_cpx*)inout, (kiss_fft_cpx*)inout);
+		kiss_fft(cfg, inout, inout);
 	}
 }

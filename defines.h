@@ -69,7 +69,8 @@
 
 /* Structure to hold constants calculated at run time based on sample rate */
 
-using C2CONST = struct c2const_tag {
+using C2CONST = struct c2const_tag
+{
     int   Fs;            /* sample rate of this instance             */
     int   n_samp;        /* number of samples per 10ms frame at Fs   */
     int   max_amp;       /* maximum number of harmonics              */
@@ -84,7 +85,8 @@ using C2CONST = struct c2const_tag {
 
 /* Structure to hold model parameters for one frame */
 
-using MODEL = struct model_tag {
+using MODEL = struct model_tag
+{
     float Wo;		  /* fundamental frequency estimate in radians  */
     int   L;		  /* number of harmonics                        */
     float A[MAX_AMP+1];	  /* amplitiude of each harmonic                */
@@ -96,21 +98,28 @@ using kiss_fft_cpx = std::complex<float>;
 
 /* describes each codebook  */
 
-struct lsp_codebook {
+struct lsp_codebook
+{
 	int     k; /* dimension of vector  */
 	int log2m; /* number of bits in m  */
 	int     m; /* elements in codebook */
 	float *cb; /* The elements         */
 };
 
-struct kiss_fft_state {
+struct kiss_fft_state
+{
     int nfft;
     int inverse;
     int factors[2*MAXFACTORS];
     kiss_fft_cpx twiddles[1];
 };
 
-using kiss_fft_cfg = struct kiss_fft_state *;
+struct kiss_fftr_state
+{
+	kiss_fft_state *substate;
+	kiss_fft_cpx *tmpbuf;
+	kiss_fft_cpx *super_twiddles;
+};
 
 extern const struct lsp_codebook lsp_cb[];
 extern const struct lsp_codebook lsp_cbd[];

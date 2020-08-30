@@ -33,7 +33,7 @@
 
 class CQuantize : public CQbase {
 public:
-	void aks_to_M2(kiss_fftr_cfg fftr_fwd_cfg, float ak[], int order, MODEL *model, float E, float *snr, int dump, int sim_pf, int pf, int bass_boost, float beta, float gamma, std::complex<float> Aw[]);
+	void aks_to_M2(kiss_fftr_state *fftr_fwd_cfg, float ak[], int order, MODEL *model, float E, float *snr, int dump, int sim_pf, int pf, int bass_boost, float beta, float gamma, std::complex<float> Aw[]);
 
 	int   encode_Wo(C2CONST *c2const, float Wo, int bits);
 	float decode_Wo(C2CONST *c2const, int index, int bits);
@@ -66,7 +66,7 @@ private:
 	void compute_weights(const float *x, float *w, int ndim);
 	int find_nearest(const float *codebook, int nb_entries, float *x, int ndim);
 	void force_min_lsp_dist(float lsp[], int order);
-	void lpc_post_filter(kiss_fftr_cfg fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E);
+	void lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E);
 };
 
 #endif
