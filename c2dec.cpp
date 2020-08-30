@@ -25,16 +25,15 @@
   along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "codec2.h"
-#include "dump.h"
-#include "c2file.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <getopt.h>
+
+#include "codec2.h"
+#include "dump.h"
 
 #define NONE          0  /* no bit errors                          */
 #define UNIFORM       1  /* random bit errors                      */
@@ -107,59 +106,31 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	// Attempt to detect a .c2 file with a header
-	struct c2_header in_hdr;
-	char *ext = strrchr(argv[2], '.');
-	if ((ext != NULL) && (strcmp(ext, ".c2") == 0))
-	{
-		int nread = fread(&in_hdr,sizeof(in_hdr),1,fin);
-		assert (nread == 1);
-
-		if (memcmp(in_hdr.magic, c2_file_magic, sizeof(c2_file_magic)) == 0)
-		{
-			fprintf(stderr, "Detected Codec2 file version %d.%d in mode %d\n",
-					in_hdr.version_major,
-					in_hdr.version_minor,
-					in_hdr.mode);
-
-			mode = in_hdr.mode;
-		}
-		else
-		{
-			fprintf(stderr, "Codec2 file specified but no header detected\n");
-			// Rewind the input file so we can try to decode
-			// based on command line mode selection
-			fseek(fin,0,SEEK_SET);
-		} /* end if - magic detection */
-	}
+	// If we got here, we need to honor the command line mode
+	if (strcmp(argv[1],"3200") == 0)
+		mode = CODEC2_MODE_3200;
+	else if (strcmp(argv[1],"2400") == 0)
+		mode = CODEC2_MODE_2400;
+	else if (strcmp(argv[1],"1600") == 0)
+		mode = CODEC2_MODE_1600;
+	else if (strcmp(argv[1],"1400") == 0)
+		mode = CODEC2_MODE_1400;
+	else if (strcmp(argv[1],"1300") == 0)
+		mode = CODEC2_MODE_1300;
+	else if (strcmp(argv[1],"1200") == 0)
+		mode = CODEC2_MODE_1200;
+	else if (strcmp(argv[1],"700C") == 0)
+		mode = CODEC2_MODE_700C;
+	else if (strcmp(argv[1],"450") == 0)
+		mode = CODEC2_MODE_450;
+	else if (strcmp(argv[1],"450PWB") == 0)
+		mode = CODEC2_MODE_450PWB;
 	else
 	{
-		// If we got here, we need to honor the command line mode
-		if (strcmp(argv[1],"3200") == 0)
-			mode = CODEC2_MODE_3200;
-		else if (strcmp(argv[1],"2400") == 0)
-			mode = CODEC2_MODE_2400;
-		else if (strcmp(argv[1],"1600") == 0)
-			mode = CODEC2_MODE_1600;
-		else if (strcmp(argv[1],"1400") == 0)
-			mode = CODEC2_MODE_1400;
-		else if (strcmp(argv[1],"1300") == 0)
-			mode = CODEC2_MODE_1300;
-		else if (strcmp(argv[1],"1200") == 0)
-			mode = CODEC2_MODE_1200;
-		else if (strcmp(argv[1],"700C") == 0)
-			mode = CODEC2_MODE_700C;
-		else if (strcmp(argv[1],"450") == 0)
-			mode = CODEC2_MODE_450;
-		else if (strcmp(argv[1],"450PWB") == 0)
-			mode = CODEC2_MODE_450PWB;
-		else
-		{
-			fprintf(stderr, "Error in mode: %s.  Must be 3200, 2400, 1600, 1400, 1300, 1200, 700C, 450, or 450PWB\n", argv[1]);
-			exit(1);
-		}
-		bit_rate = atoi(argv[1]);
-	}; /* end if - extension / header detection */
+		fprintf(stderr, "Error in mode: %s.  Must be 3200, 2400, 1600, 1400, 1300, 1200, 700C, 450, or 450PWB\n", argv[1]);
+		exit(1);
+	}
+	bit_rate = atoi(argv[1]);
 
 	error_mode = NONE;
 	ber = 0.0;

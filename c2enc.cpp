@@ -26,14 +26,13 @@
   along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "codec2.h"
-#include "c2file.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+
+#include "codec2.h"
 
 int main(int argc, char *argv[])
 {
@@ -95,23 +94,6 @@ int main(int argc, char *argv[])
 				argv[3], strerror(errno));
 		exit(1);
 	}
-
-	// Write a header if we're writing to a .c2 file
-	char *ext = strrchr(argv[3], '.');
-	if (ext != NULL)
-	{
-		if (strcmp(ext, ".c2") == 0)
-		{
-			struct c2_header out_hdr;
-			memcpy(out_hdr.magic,c2_file_magic,sizeof(c2_file_magic));
-			out_hdr.mode = mode;
-			out_hdr.version_major = CODEC2_VERSION_MAJOR;
-			out_hdr.version_minor = CODEC2_VERSION_MINOR;
-			// TODO: Handle flags (this block needs to be moved down)
-			out_hdr.flags = 0;
-			fwrite(&out_hdr,sizeof(out_hdr),1,fout);
-		};
-	};
 
 	auto codec2 = codec2_create(mode);
 	auto nsam = codec2_samples_per_frame(codec2);
