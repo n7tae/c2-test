@@ -133,4 +133,10 @@ void synthesise(int n_samp, kiss_fftr_state *fftr_inv_cfg, float Sn_[], MODEL *m
 int codec2_rand(void);
 void hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float pmin, float pmax, float pstep);
 
+void interp_Wo(MODEL *interp, MODEL *prev, MODEL *next, float Wo_min);
+void interp_Wo2(MODEL *interp, MODEL *prev, MODEL *next, float weight, float Wo_min);
+float interp_energy(float prev, float next);
+float interp_energy2(float prev, float next, float weight);
+void interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order);
+
 #endif

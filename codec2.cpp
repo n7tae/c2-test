@@ -37,7 +37,6 @@
 #include "dump.h"
 #include "lpc.h"
 #include "quantise.h"
-#include "interp.h"
 #include "codec2.h"
 #include "lsp.h"
 #include "newamp2.h"
@@ -3147,4 +3146,121 @@ int codec2_rand(void)
 	static unsigned long next = 1;
 	next = next * 1103515245 + 12345;
 	return((unsigned)(next/65536) % 32768);
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: interp_Wo()
+  AUTHOR......: David Rowe
+  DATE CREATED: 22 May 2012
+
+  Interpolates centre 10ms sample of Wo and L samples given two
+  samples 20ms apart. Assumes voicing is available for centre
+  (interpolated) frame.
+
+\*---------------------------------------------------------------------------*/
+
+void interp_Wo(
+	MODEL *interp,    /* interpolated model params                     */
+	MODEL *prev,      /* previous frames model params                  */
+	MODEL *next,      /* next frames model params                      */
+	float  Wo_min
+)
+{
+	interp_Wo2(interp, prev, next, 0.5, Wo_min);
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: interp_Wo2()
+  AUTHOR......: David Rowe
+  DATE CREATED: 22 May 2012
+
+  Weighted interpolation of two Wo samples.
+
+\*---------------------------------------------------------------------------*/
+
+void interp_Wo2(
+	MODEL *interp,    /* interpolated model params                     */
+	MODEL *prev,      /* previous frames model params                  */
+	MODEL *next,      /* next frames model params                      */
+	float  weight,
+	float  Wo_min
+)
+{
+	/* trap corner case where voicing est is probably wrong */
+
+	if (interp->voiced && !prev->voiced && !next->voiced)
+	{
+		interp->voiced = 0;
+	}
+
+	/* Wo depends on voicing of this and adjacent frames */
+
+	if (interp->voiced)
+	{
+		if (prev->voiced && next->voiced)
+			interp->Wo = (1.0 - weight)*prev->Wo + weight*next->Wo;
+		if (!prev->voiced && next->voiced)
+			interp->Wo = next->Wo;
+		if (prev->voiced && !next->voiced)
+			interp->Wo = prev->Wo;
+	}
+	else
+	{
+		interp->Wo = Wo_min;
+	}
+	interp->L = PI/interp->Wo;
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: interp_energy()
+  AUTHOR......: David Rowe
+  DATE CREATED: 22 May 2012
+
+  Interpolates centre 10ms sample of energy given two samples 20ms
+  apart.
+
+\*---------------------------------------------------------------------------*/
+
+float interp_energy(float prev_e, float next_e)
+{
+	//return powf(10.0, (log10f(prev_e) + log10f(next_e))/2.0);
+	return sqrtf(prev_e * next_e); //looks better is math. identical and faster math
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: interp_energy2()
+  AUTHOR......: David Rowe
+  DATE CREATED: 22 May 2012
+
+  Interpolates centre 10ms sample of energy given two samples 20ms
+  apart.
+
+\*---------------------------------------------------------------------------*/
+
+float interp_energy2(float prev_e, float next_e, float weight)
+{
+	return exp10f((1.0 - weight)*log10f(prev_e) + weight*log10f(next_e));
+
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: interpolate_lsp_ver2()
+  AUTHOR......: David Rowe
+  DATE CREATED: 22 May 2012
+
+  Weighted interpolation of LSPs.
+
+\*---------------------------------------------------------------------------*/
+
+void interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order)
+{
+	int i;
+
+	for(i=0; i<order; i++)
+		interp[i] = (1.0 - weight)*prev[i] + weight*next[i];
 }
