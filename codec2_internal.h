@@ -29,7 +29,7 @@
 #ifndef __CODEC2_INTERNAL__
 #define __CODEC2_INTERNAL__
 
-#include "codec2_fft.h"
+#include "kiss_fft.h"
 #include "newamp1.h"
 #include "newamp2.h"
 

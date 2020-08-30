@@ -3,7 +3,7 @@
 
 #include <complex>
 #include "qbase.h"
-#include "codec2_fft.h"
+#include "kiss_fft.h"
 
 class CNewampbase : public CQbase
 {

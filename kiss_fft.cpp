@@ -16,11 +16,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 #include "defines.h"
 
-static void kf_bfly2(kiss_fft_cpx *Fout, const size_t fstride, kiss_fft_state *st, int m)
+static void kf_bfly2(std::complex<float> *Fout, const size_t fstride, kiss_fft_state *st, int m)
 {
-	kiss_fft_cpx *Fout2;
-	kiss_fft_cpx *tw1 = st->twiddles;
-	kiss_fft_cpx t;
+	std::complex<float> *Fout2;
+	std::complex<float> *tw1 = st->twiddles;
+	std::complex<float> t;
 	Fout2 = Fout + m;
 	do
 	{
@@ -34,10 +34,10 @@ static void kf_bfly2(kiss_fft_cpx *Fout, const size_t fstride, kiss_fft_state *s
 	while (--m);
 }
 
-static void kf_bfly4(kiss_fft_cpx *Fout, const size_t fstride, kiss_fft_state *st, const size_t m)
+static void kf_bfly4(std::complex<float> *Fout, const size_t fstride, kiss_fft_state *st, const size_t m)
 {
-	kiss_fft_cpx *tw1,*tw2,*tw3;
-	kiss_fft_cpx scratch[6];
+	std::complex<float> *tw1,*tw2,*tw3;
+	std::complex<float> scratch[6];
 	size_t k=m;
 	const size_t m2=2*m;
 	const size_t m3=3*m;
@@ -80,13 +80,13 @@ static void kf_bfly4(kiss_fft_cpx *Fout, const size_t fstride, kiss_fft_state *s
 	while(--k);
 }
 
-static void kf_bfly3(kiss_fft_cpx * Fout, const size_t fstride, kiss_fft_state *st, size_t m)
+static void kf_bfly3(std::complex<float> * Fout, const size_t fstride, kiss_fft_state *st, size_t m)
 {
 	size_t k=m;
 	const size_t m2 = 2*m;
-	kiss_fft_cpx *tw1,*tw2;
-	kiss_fft_cpx scratch[5];
-	kiss_fft_cpx epi3;
+	std::complex<float> *tw1,*tw2;
+	std::complex<float> scratch[5];
+	std::complex<float> epi3;
 	epi3 = st->twiddles[fstride*m];
 
 	tw1 = tw2 = st->twiddles;
@@ -118,14 +118,14 @@ static void kf_bfly3(kiss_fft_cpx * Fout, const size_t fstride, kiss_fft_state *
 	while(--k);
 }
 
-static void kf_bfly5(kiss_fft_cpx * Fout, const size_t fstride, kiss_fft_state *st, int m)
+static void kf_bfly5(std::complex<float> * Fout, const size_t fstride, kiss_fft_state *st, int m)
 {
-	kiss_fft_cpx *Fout0,*Fout1,*Fout2,*Fout3,*Fout4;
+	std::complex<float> *Fout0,*Fout1,*Fout2,*Fout3,*Fout4;
 	int u;
-	kiss_fft_cpx scratch[13];
-	kiss_fft_cpx * twiddles = st->twiddles;
-	kiss_fft_cpx *tw;
-	kiss_fft_cpx ya,yb;
+	std::complex<float> scratch[13];
+	std::complex<float> * twiddles = st->twiddles;
+	std::complex<float> *tw;
+	std::complex<float> ya,yb;
 	ya = twiddles[fstride*m];
 	yb = twiddles[fstride*2*m];
 
@@ -176,14 +176,14 @@ static void kf_bfly5(kiss_fft_cpx * Fout, const size_t fstride, kiss_fft_state *
 }
 
 /* perform the butterfly for one stage of a mixed radix FFT */
-static void kf_bfly_generic(kiss_fft_cpx *Fout, const size_t fstride, kiss_fft_state *st, int m, int p)
+static void kf_bfly_generic(std::complex<float> *Fout, const size_t fstride, kiss_fft_state *st, int m, int p)
 {
 	int u,k,q1,q;
-	kiss_fft_cpx *twiddles = st->twiddles;
-	kiss_fft_cpx t;
+	std::complex<float> *twiddles = st->twiddles;
+	std::complex<float> t;
 	int Norig = st->nfft;
 
-	kiss_fft_cpx * scratch = (kiss_fft_cpx*)malloc(sizeof(kiss_fft_cpx)*p);
+	std::complex<float> * scratch = (std::complex<float>*)malloc(sizeof(std::complex<float>)*p);
 
 	for ( u=0; u<m; ++u )
 	{
@@ -212,12 +212,12 @@ static void kf_bfly_generic(kiss_fft_cpx *Fout, const size_t fstride, kiss_fft_s
 	free(scratch);
 }
 
-static void kf_work(kiss_fft_cpx *Fout, const kiss_fft_cpx *f, const size_t fstride, int in_stride, int *factors, kiss_fft_state *st)
+static void kf_work(std::complex<float> *Fout, const std::complex<float> *f, const size_t fstride, int in_stride, int *factors, kiss_fft_state *st)
 {
-	kiss_fft_cpx * Fout_beg=Fout;
+	std::complex<float> * Fout_beg=Fout;
 	const int p=*factors++; /* the radix  */
 	const int m=*factors++; /* stage's fft length/p */
-	const kiss_fft_cpx * Fout_end = Fout + p*m;
+	const std::complex<float> * Fout_end = Fout + p*m;
 
 	if (m==1)
 	{
@@ -312,7 +312,7 @@ static void kf_factor(int n,int * facbuf)
 kiss_fft_state *kiss_fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
 {
 	kiss_fft_state *st=NULL;
-	size_t memneeded = sizeof(struct kiss_fft_state) + sizeof(kiss_fft_cpx)*(nfft-1); /* twiddle factors*/
+	size_t memneeded = sizeof(struct kiss_fft_state) + sizeof(std::complex<float>)*(nfft-1); /* twiddle factors*/
 
 	if ( lenmem==NULL )
 	{
@@ -345,26 +345,26 @@ kiss_fft_state *kiss_fft_alloc(int nfft, int inverse_fft, void *mem, size_t *len
 }
 
 
-void kiss_fft_stride(kiss_fft_state *st,const kiss_fft_cpx *fin,kiss_fft_cpx *fout,int in_stride)
+void kiss_fft_stride(kiss_fft_state *st, const std::complex<float> *fin, std::complex<float> *fout, int in_stride)
 {
 	if (fin == fout)
 	{
 		//NOTE: this is not really an in-place FFT algorithm.
 		//It just performs an out-of-place FFT into a temp buffer
-		kiss_fft_cpx * tmpbuf = (kiss_fft_cpx*)malloc( sizeof(kiss_fft_cpx)*st->nfft);
+		std::complex<float> *tmpbuf = (std::complex<float>*)malloc(sizeof(std::complex<float>)*st->nfft);
 		kf_work(tmpbuf,fin,1,in_stride, st->factors,st);
-		memcpy(fout,tmpbuf,sizeof(kiss_fft_cpx)*st->nfft);
+		memcpy(fout, tmpbuf, sizeof(std::complex<float>)*st->nfft);
 		free(tmpbuf);
 	}
 	else
 	{
-		kf_work( fout, fin, 1,in_stride, st->factors,st );
+		kf_work( fout, fin, 1, in_stride, st->factors,st );
 	}
 }
 
-void kiss_fft(kiss_fft_state *cfg,const kiss_fft_cpx *fin,kiss_fft_cpx *fout)
+void kiss_fft(kiss_fft_state *cfg, const std::complex<float> *fin, std::complex<float> *fout)
 {
-	kiss_fft_stride(cfg,fin,fout,1);
+	kiss_fft_stride(cfg, fin, fout, 1);
 }
 
 

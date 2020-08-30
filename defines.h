@@ -94,8 +94,6 @@ using MODEL = struct model_tag
     int   voiced;	  /* non-zero if this frame is voiced           */
 };
 
-using kiss_fft_cpx = std::complex<float>;
-
 /* describes each codebook  */
 
 struct lsp_codebook
@@ -111,14 +109,14 @@ struct kiss_fft_state
     int nfft;
     int inverse;
     int factors[2*MAXFACTORS];
-    kiss_fft_cpx twiddles[1];
+    std::complex<float> twiddles[1];
 };
 
 struct kiss_fftr_state
 {
 	kiss_fft_state *substate;
-	kiss_fft_cpx *tmpbuf;
-	kiss_fft_cpx *super_twiddles;
+	std::complex<float> *tmpbuf;
+	std::complex<float> *super_twiddles;
 };
 
 extern const struct lsp_codebook lsp_cb[];

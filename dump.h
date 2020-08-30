@@ -28,7 +28,7 @@
 
 #include "defines.h"
 #include <complex>
-#include "codec2_fft.h"
+#include "kiss_fft.h"
 #include "codec2_internal.h"
 
 void dump_on(char filename_prefix[]);

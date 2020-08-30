@@ -18,13 +18,13 @@ kiss_fftr_state *kiss_fftr_alloc(int nfft,int inverse_fft,void * mem, size_t * l
 */
 
 
-void kiss_fftr(kiss_fftr_state *cfg,const float *timedata,kiss_fft_cpx *freqdata);
+void kiss_fftr(kiss_fftr_state *cfg,const float *timedata,std::complex<float> *freqdata);
 /*
  input timedata has nfft scalar points
  output freqdata has nfft/2+1 complex points
 */
 
-void kiss_fftri(kiss_fftr_state *cfg,const kiss_fft_cpx *freqdata,float *timedata);
+void kiss_fftri(kiss_fftr_state *cfg,const std::complex<float> *freqdata,float *timedata);
 /*
  input freqdata has  nfft/2+1 complex points
  output timedata has nfft scalar points

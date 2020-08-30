@@ -32,7 +32,7 @@
 #include <complex>
 
 #include "defines.h"
-#include "codec2_fft.h"
+#include "kiss_fftr.h"
 #include "version.h"
 
 #define CODEC2_MODE_3200 	0

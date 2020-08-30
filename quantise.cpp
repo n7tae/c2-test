@@ -36,7 +36,7 @@
 #include "quantise.h"
 #include "lpc.h"
 #include "lsp.h"
-#include "codec2_fft.h"
+#include "kiss_fftr.h"
 #include "mbest.h"
 
 #undef PROFILE
@@ -272,7 +272,7 @@ void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float
 		x[i] = ak[i] * coeff;
 		coeff *= gamma;
 	}
-	codec2_fftr(fftr_fwd_cfg, x, Ww);
+	kiss_fftr(fftr_fwd_cfg, x, Ww);
 
 	PROFILE_SAMPLE_AND_LOG(tfft2, taw, "        fft2");
 
@@ -400,7 +400,7 @@ void CQuantize::aks_to_M2(
 
 		for(i=0; i<=order; i++)
 			a[i] = ak[i];
-		codec2_fftr(fftr_fwd_cfg, a, Aw);
+		kiss_fftr(fftr_fwd_cfg, a, Aw);
 	}
 	PROFILE_SAMPLE_AND_LOG(tfft, tstart, "      fft");
 

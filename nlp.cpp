@@ -25,16 +25,16 @@
   along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <assert.h>
+#include <math.h>
+#include <stdlib.h>
+
 #include "defines.h"
 #include "nlp.h"
 #include "dump.h"
 #undef PROFILE
 #include "machdep.h"
 #include "os.h"
-
-#include <assert.h>
-#include <math.h>
-#include <stdlib.h>
 
 
 /*---------------------------------------------------------------------------*\
@@ -146,7 +146,7 @@ void Cnlp::nlp_create(C2CONST *c2const)
 	for(i=0; i<NLP_NTAP; i++)
 		snlp.mem_fir[i] = 0.0;
 
-	snlp.fft_cfg = codec2_fft_alloc(PE_FFT_SIZE, 0, NULL, NULL);
+	snlp.fft_cfg = kiss_fft_alloc(PE_FFT_SIZE, 0, NULL, NULL);
 	assert(snlp.fft_cfg != NULL);
 }
 
@@ -160,7 +160,7 @@ void Cnlp::nlp_create(C2CONST *c2const)
 
 void Cnlp::nlp_destroy()
 {
-	codec2_fft_free(snlp.fft_cfg);
+	free(snlp.fft_cfg);
 }
 
 /*---------------------------------------------------------------------------*\
@@ -474,4 +474,27 @@ void Cnlp::fdmdv_16_to_8(float out8k[], float in16k[], int n)
 
 	for(i=-FDMDV_OS_TAPS_16K; i<0; i++)
 		in16k[i] = in16k[i + n*FDMDV_OS];
+}
+
+// there is a little overhead for inplace kiss_fft but this is
+// on the powerful platforms like the Raspberry or even x86 PC based ones
+// not noticeable
+// the reduced usage of RAM and increased performance on STM32 platforms
+// should be worth it.
+void Cnlp::codec2_fft_inplace(kiss_fft_state *cfg, std::complex<float> *inout)
+{
+	std::complex<float> in[512];
+	// decide whether to use the local stack based buffer for in
+	// or to allow kiss_fft to allocate RAM
+	// second part is just to play safe since first method
+	// is much faster and uses less RAM
+	if (cfg->nfft <= 512)
+	{
+		memcpy(in, inout, cfg->nfft*sizeof(std::complex<float>));
+		kiss_fft(cfg, in, inout);
+	}
+	else
+	{
+		kiss_fft(cfg, inout, inout);
+	}
 }

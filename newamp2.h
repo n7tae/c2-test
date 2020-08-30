@@ -39,7 +39,7 @@
 
 #include <complex>
 
-#include "codec2_fft.h"
+#include "kiss_fft.h"
 
 class CNewamp2 : public CNewampbase
 {

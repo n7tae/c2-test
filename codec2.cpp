@@ -33,7 +33,6 @@
 #include <string.h>
 #include <math.h>
 
-#include "codec2_fft.h"
 #include "nlp.h"
 #include "dump.h"
 #include "lpc.h"
@@ -182,11 +181,11 @@ struct CODEC2 * codec2_create(int mode)
 	c2->hpf_states[0] = c2->hpf_states[1] = 0.0;
 	for(i=0; i<2*n_samp; i++)
 		c2->Sn_[i] = 0;
-	c2->fft_fwd_cfg = codec2_fft_alloc(FFT_ENC, 0, NULL, NULL);
-	c2->fftr_fwd_cfg = codec2_fftr_alloc(FFT_ENC, 0, NULL, NULL);
+	c2->fft_fwd_cfg = kiss_fft_alloc(FFT_ENC, 0, NULL, NULL);
+	c2->fftr_fwd_cfg = kiss_fftr_alloc(FFT_ENC, 0, NULL, NULL);
 	make_analysis_window(&c2->c2const, c2->fft_fwd_cfg, c2->w,c2->W);
 	make_synthesis_window(&c2->c2const, c2->Pn);
-	c2->fftr_inv_cfg = codec2_fftr_alloc(FFT_DEC, 1, NULL, NULL);
+	c2->fftr_inv_cfg = kiss_fftr_alloc(FFT_DEC, 1, NULL, NULL);
 	c2->prev_f0_enc = 1/P_MAX_S;
 	c2->bg_est = 0.0;
 	c2->ex_phase = 0.0;
@@ -241,8 +240,8 @@ struct CODEC2 * codec2_create(int mode)
 		c2->eq_en = 0;
 		c2->Wo_left = 0.0;
 		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = codec2_fft_alloc(NEWAMP1_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = codec2_fft_alloc(NEWAMP1_PHASE_NFFT, 1, NULL, NULL);
+		c2->phase_fft_fwd_cfg = kiss_fft_alloc(NEWAMP1_PHASE_NFFT, 0, NULL, NULL);
+		c2->phase_fft_inv_cfg = kiss_fft_alloc(NEWAMP1_PHASE_NFFT, 1, NULL, NULL);
 	}
 
 	/* newamp2 initialisation */
@@ -257,8 +256,8 @@ struct CODEC2 * codec2_create(int mode)
 		}
 		c2->Wo_left = 0.0;
 		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = codec2_fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = codec2_fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		c2->phase_fft_fwd_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
+		c2->phase_fft_inv_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
 	}
 	/* newamp2 PWB initialisation */
 
@@ -272,8 +271,8 @@ struct CODEC2 * codec2_create(int mode)
 		}
 		c2->Wo_left = 0.0;
 		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = codec2_fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = codec2_fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		c2->phase_fft_fwd_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
+		c2->phase_fft_inv_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
 	}
 
 	c2->fmlfeat = NULL;
@@ -360,23 +359,23 @@ void codec2_destroy(struct CODEC2 *c2)
 	assert(c2 != NULL);
 	FREE(c2->bpf_buf);
 	nlp.nlp_destroy();
-	codec2_fft_free(c2->fft_fwd_cfg);
-	codec2_fftr_free(c2->fftr_fwd_cfg);
-	codec2_fftr_free(c2->fftr_inv_cfg);
+	free(c2->fft_fwd_cfg);
+	free(c2->fftr_fwd_cfg);
+	free(c2->fftr_inv_cfg);
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode))
 	{
-		codec2_fft_free(c2->phase_fft_fwd_cfg);
-		codec2_fft_free(c2->phase_fft_inv_cfg);
+		free(c2->phase_fft_fwd_cfg);
+		free(c2->phase_fft_inv_cfg);
 	}
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode))
 	{
-		codec2_fft_free(c2->phase_fft_fwd_cfg);
-		codec2_fft_free(c2->phase_fft_inv_cfg);
+		free(c2->phase_fft_fwd_cfg);
+		free(c2->phase_fft_inv_cfg);
 	}
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
 	{
-		codec2_fft_free(c2->phase_fft_fwd_cfg);
-		codec2_fft_free(c2->phase_fft_inv_cfg);
+		free(c2->phase_fft_fwd_cfg);
+		free(c2->phase_fft_inv_cfg);
 	}
 	FREE(c2->Pn);
 	FREE(c2->Sn);
@@ -2703,7 +2702,7 @@ void make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w
 	for(i=FFT_ENC-nw/2,j=m_pitch/2-nw/2; i<FFT_ENC; i++,j++)
 		wshift[i].real(w[j]);
 
-	codec2_fft(fft_fwd_cfg, wshift, temp);
+	kiss_fft(fft_fwd_cfg, wshift, temp);
 
 	/*
 	    Re-arrange W[] to be symmetrical about FFT_ENC/2.  Makes later
@@ -2770,7 +2769,7 @@ void dft_speech(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, std::complex<floa
     for(i=0; i<nw/2; i++)
         Sw[FFT_ENC-nw/2+i].real(Sn[i+m_pitch/2-nw/2]*w[i+m_pitch/2-nw/2]);
 
-    codec2_fft_inplace(fft_fwd_cfg, Sw);
+    nlp.codec2_fft_inplace(fft_fwd_cfg, Sw);
 }
 
 /*---------------------------------------------------------------------------*\
@@ -2793,7 +2792,7 @@ void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<flo
 	pmax = TWO_PI/model->Wo + 5;
 	pmin = TWO_PI/model->Wo - 5;
 	pstep = 1.0;
-	hs_pitch_refinement(model,Sw,pmin,pmax,pstep);
+	hs_pitch_refinement(model, Sw, pmin, pmax, pstep);
 
 	/* Fine refinement */
 
@@ -3141,7 +3140,7 @@ void synthesise(
 
 	/* Perform inverse DFT */
 
-	codec2_fftri(fftr_inv_cfg, Sw_,sw_);
+	kiss_fftri(fftr_inv_cfg, Sw_,sw_);
 
 	/* Overlap add to previous samples */
 

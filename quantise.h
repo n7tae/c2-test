@@ -28,7 +28,6 @@
 
 #include <complex>
 
-#include "codec2_fft.h"
 #include "qbase.h"
 
 class CQuantize : public CQbase {

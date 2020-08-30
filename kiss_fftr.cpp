@@ -30,7 +30,7 @@ kiss_fftr_state *kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *
 	nfft >>= 1;
 
 	kiss_fft_alloc (nfft, inverse_fft, NULL, &subsize);
-	memneeded = sizeof(struct kiss_fftr_state) + subsize + sizeof(kiss_fft_cpx) * ( nfft * 3 / 2);
+	memneeded = sizeof(struct kiss_fftr_state) + subsize + sizeof(std::complex<float>) * ( nfft * 3 / 2);
 
 	if (lenmem == NULL)
 	{
@@ -46,7 +46,7 @@ kiss_fftr_state *kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *
 		return NULL;
 
 	st->substate = (kiss_fft_state *)(st + 1); /*just beyond kiss_fftr_state struct */
-	st->tmpbuf = (kiss_fft_cpx *) (((char *) st->substate) + subsize);
+	st->tmpbuf = (std::complex<float> *) (((char *) st->substate) + subsize);
 	st->super_twiddles = st->tmpbuf + nfft;
 	kiss_fft_alloc(nfft, inverse_fft, st->substate, &subsize);
 
@@ -61,18 +61,18 @@ kiss_fftr_state *kiss_fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *
 	return st;
 }
 
-void kiss_fftr(kiss_fftr_state *st, const float *timedata, kiss_fft_cpx *freqdata)
+void kiss_fftr(kiss_fftr_state *st, const float *timedata, std::complex<float> *freqdata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k,ncfft;
-	kiss_fft_cpx fpnk,fpk,f1k,f2k,tw,tdc;
+	std::complex<float> fpnk,fpk,f1k,f2k,tw,tdc;
 
 	assert(st->substate->inverse==0);
 
 	ncfft = st->substate->nfft;
 
 	/*perform the parallel fft of two real signals packed in real,imag*/
-	kiss_fft( st->substate, (const kiss_fft_cpx*)timedata, st->tmpbuf );
+	kiss_fft( st->substate, (const std::complex<float>*)timedata, st->tmpbuf );
 	/* The real part of the DC element of the frequency spectrum in st->tmpbuf
 	 * contains the sum of the even-numbered elements of the input time sequence
 	 * The imag part is the sum of the odd-numbered elements
@@ -104,7 +104,7 @@ void kiss_fftr(kiss_fftr_state *st, const float *timedata, kiss_fft_cpx *freqdat
 	}
 }
 
-void kiss_fftri(kiss_fftr_state *st, const kiss_fft_cpx *freqdata, float *timedata)
+void kiss_fftri(kiss_fftr_state *st, const std::complex<float> *freqdata, float *timedata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k, ncfft;
@@ -118,7 +118,7 @@ void kiss_fftri(kiss_fftr_state *st, const kiss_fft_cpx *freqdata, float *timeda
 
 	for (k = 1; k <= ncfft / 2; ++k)
 	{
-		kiss_fft_cpx fk, fnkc, fek, fok, tmp;
+		std::complex<float> fk, fnkc, fek, fok, tmp;
 		fk = freqdata[k];
 		fnkc = std::conj(freqdata[ncfft - k]);
 
@@ -128,5 +128,5 @@ void kiss_fftri(kiss_fftr_state *st, const kiss_fft_cpx *freqdata, float *timeda
 		st->tmpbuf[k] = fek + fok;
 		st->tmpbuf[ncfft - k] = std::conj(fek - fok);
 	}
-	kiss_fft (st->substate, st->tmpbuf, (kiss_fft_cpx *) timedata);
+	kiss_fft (st->substate, st->tmpbuf, (std::complex<float> *) timedata);
 }
