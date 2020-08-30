@@ -43,12 +43,11 @@
 #include "newamp2.h"
 #include "codec2_internal.h"
 #include "machdep.h"
-#include "bpf.h"
-#include "bpfb.h"
 
 #include "debug_alloc.h"
 
 #define HPF_BETA 0.125
+#define BPF_N 101
 
 static Cnlp nlp;
 static CQuantize qt;
