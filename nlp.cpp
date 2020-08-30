@@ -32,8 +32,6 @@
 #include "defines.h"
 #include "nlp.h"
 #include "dump.h"
-#undef PROFILE
-#include "machdep.h"
 
 
 /*---------------------------------------------------------------------------*\
@@ -257,7 +255,6 @@ float Cnlp::nlp(
 	int    gmax_bin;
 	int    m, i, j;
 	float  best_f0;
-	PROFILE_VAR(start, tnotch, filter, peakpick, window, fft, magsq, shiftmem);
 
 	m = snlp.m;
 
@@ -301,9 +298,6 @@ float Cnlp::nlp(
 		}
 		assert(j <= n);
 	}
-	//fprintf(stderr, "n: %d m: %d\n", n, m);
-
-	PROFILE_SAMPLE(start);
 
 	for(i=m-n; i<m; i++)  	/* notch filter at DC */
 	{
@@ -321,8 +315,6 @@ float Cnlp::nlp(
 				      exactly sure why. */
 	}
 
-	PROFILE_SAMPLE_AND_LOG(tnotch, start, "      square and notch");
-
 	for(i=m-n; i<m; i++)  	/* FIR filter vector */
 	{
 
@@ -335,8 +327,6 @@ float Cnlp::nlp(
 			snlp.sq[i] += snlp.mem_fir[j]*nlp_fir[j];
 	}
 
-	PROFILE_SAMPLE_AND_LOG(filter, tnotch, "      filter");
-
 	/* Decimate and DFT */
 
 	for(i=0; i<PE_FFT_SIZE; i++)
@@ -348,7 +338,6 @@ float Cnlp::nlp(
 	{
 		Fw[i].real(snlp.sq[i*DEC]*snlp.w[i]);
 	}
-	PROFILE_SAMPLE_AND_LOG(window, filter, "      window");
 #ifdef DUMP
 	dump_dec(Fw);
 #endif
@@ -356,12 +345,10 @@ float Cnlp::nlp(
 	// FIXME: check if this can be converted to a real fft
 	// since all imag inputs are 0
 	codec2_fft_inplace(snlp.fft_cfg, Fw);
-	PROFILE_SAMPLE_AND_LOG(fft, window, "      fft");
 
 	for(i=0; i<PE_FFT_SIZE; i++)
 		Fw[i].real(Fw[i].real() * Fw[i].real() + Fw[i].imag() * Fw[i].imag());
 
-	PROFILE_SAMPLE_AND_LOG(magsq, fft, "      mag sq");
 #ifdef DUMP
 	dump_sq(m, snlp.sq);
 	dump_Fw(Fw);
@@ -385,11 +372,7 @@ float Cnlp::nlp(
 		}
 	}
 
-	PROFILE_SAMPLE_AND_LOG(peakpick, magsq, "      peak pick");
-
 	best_f0 = post_process_sub_multiples(Fw, pmin, pmax, gmax, gmax_bin, prev_f0);
-
-	PROFILE_SAMPLE_AND_LOG(shiftmem, peakpick,  "      post process");
 
 	/* Shift samples in buffer to make room for new samples */
 
@@ -399,10 +382,6 @@ float Cnlp::nlp(
 	/* return pitch period in samples and F0 estimate */
 
 	*pitch = (float)snlp.Fs/best_f0;
-
-	PROFILE_SAMPLE_AND_LOG2(shiftmem,  "      shift mem");
-
-	PROFILE_SAMPLE_AND_LOG2(start,  "      nlp int");
 
 	*prev_f0 = best_f0;
 

@@ -42,7 +42,6 @@
 #include "lsp.h"
 #include "newamp2.h"
 #include "codec2_internal.h"
-#include "machdep.h"
 
 #include "debug_alloc.h"
 
@@ -1185,9 +1184,6 @@ void codec2_encode_1300(struct CODEC2 *c2, unsigned char * bits, short speech[])
 	int     Wo_index, e_index;
 	int     i;
 	unsigned int nbit = 0;
-	//#ifdef PROFILE
-	//unsigned int quant_start;
-	//#endif
 
 	assert(c2 != NULL);
 
@@ -1216,9 +1212,6 @@ void codec2_encode_1300(struct CODEC2 *c2, unsigned char * bits, short speech[])
 	Wo_index = qt.encode_Wo(&c2->c2const, model.Wo, WO_BITS);
 	qt.pack_natural_or_gray(bits, &nbit, Wo_index, WO_BITS, c2->gray);
 
-	//#ifdef PROFILE
-	//quant_start = machdep_profile_sample();
-	//#endif
 	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
 	e_index = qt.encode_energy(e, E_BITS);
 	qt.pack_natural_or_gray(bits, &nbit, e_index, E_BITS, c2->gray);
@@ -1228,9 +1221,6 @@ void codec2_encode_1300(struct CODEC2 *c2, unsigned char * bits, short speech[])
 	{
 		qt.pack_natural_or_gray(bits, &nbit, lsp_indexes[i], qt.lsp_bits(i), c2->gray);
 	}
-	//#ifdef PROFILE
-	//machdep_profile_sample_and_log(quant_start, "    quant/packing");
-	//#endif
 
 	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
 }
@@ -1259,7 +1249,6 @@ void codec2_decode_1300(struct CODEC2 *c2, short speech[], const unsigned char *
 	unsigned int nbit = 0;
 	float   weight;
 	std::complex<float>    Aw[FFT_ENC];
-	//PROFILE_VAR(recover_start);
 
 	assert(c2 != NULL);
 	frames+= 4;
@@ -1308,7 +1297,6 @@ void codec2_decode_1300(struct CODEC2 *c2, short speech[], const unsigned char *
 	/* Wo, energy, and LSPs are sampled every 40ms so we interpolate
 	   the 3 frames in between */
 
-	//PROFILE_SAMPLE(recover_start);
 	for(i=0, weight=0.25; i<3; i++, weight += 0.25)
 	{
 		interpolate_lsp_ver2(&lsps[i][0], c2->prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
@@ -1345,7 +1333,7 @@ void codec2_decode_1300(struct CODEC2 *c2, short speech[], const unsigned char *
 	if (frames == 4*50)
 	    exit(0);
 	*/
-	//PROFILE_SAMPLE_AND_LOG2(recover_start, "    recover");
+
 #ifdef DUMP
 	dump_lsp_(&lsps[3][0]);
 	dump_ak_(&ak[3][0], LPC_ORD);

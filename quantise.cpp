@@ -39,9 +39,6 @@
 #include "kiss_fftr.h"
 #include "mbest.h"
 
-#undef PROFILE
-#include "machdep.h"
-
 #define LSP_DELTA1 0.01         /* grid spacing for LSP root searches */
 
 /*---------------------------------------------------------------------------*\
@@ -254,9 +251,6 @@ void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float
 	float Pfw;
 	float max_Rw, min_Rw;
 	float coeff;
-	PROFILE_VAR(tstart, tfft1, taw, tfft2, tww, tr);
-
-	PROFILE_SAMPLE(tstart);
 
 	/* Determine weighting filter spectrum W(exp(jw)) ---------------*/
 
@@ -274,14 +268,10 @@ void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float
 	}
 	kiss_fftr(fftr_fwd_cfg, x, Ww);
 
-	PROFILE_SAMPLE_AND_LOG(tfft2, taw, "        fft2");
-
 	for(i=0; i<FFT_ENC/2; i++)
 	{
 		Ww[i].real(Ww[i].real() * Ww[i].real() + Ww[i].imag() * Ww[i].imag());
 	}
-
-	PROFILE_SAMPLE_AND_LOG(tww, tfft2, "        Ww");
 
 	/* Determined combined filter R = WA ---------------------------*/
 
@@ -296,8 +286,6 @@ void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float
 			min_Rw = Rw[i];
 
 	}
-
-	PROFILE_SAMPLE_AND_LOG(tr, tww, "        R");
 
 #ifdef DUMP
 	if (dump)
@@ -346,8 +334,6 @@ void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float
 			Pw[i] *= 1.4*1.4;
 		}
 	}
-
-	PROFILE_SAMPLE_AND_LOG2(tr, "        filt");
 }
 
 
@@ -383,9 +369,6 @@ void CQuantize::aks_to_M2(
 	float Em;		/* energy in band */
 	float Am;		/* spectral amplitude sample */
 	float signal, noise;
-	PROFILE_VAR(tstart, tfft, tpw, tpf);
-
-	PROFILE_SAMPLE(tstart);
 
 	r = TWO_PI/(FFT_ENC);
 
@@ -402,7 +385,6 @@ void CQuantize::aks_to_M2(
 			a[i] = ak[i];
 		kiss_fftr(fftr_fwd_cfg, a, Aw);
 	}
-	PROFILE_SAMPLE_AND_LOG(tfft, tstart, "      fft");
 
 	/* Determine power spectrum P(w) = E/(A(exp(jw))^2 ------------------------*/
 
@@ -413,8 +395,6 @@ void CQuantize::aks_to_M2(
 		Pw[i] = 1.0/(Aw[i].real() * Aw[i].real() + Aw[i].imag() * Aw[i].imag() + 1E-6);
 	}
 
-	PROFILE_SAMPLE_AND_LOG(tpw, tfft, "      Pw");
-
 	if (pf)
 		lpc_post_filter(fftr_fwd_cfg, Pw, ak, order, dump, beta, gamma, bass_boost, E);
 	else
@@ -424,8 +404,6 @@ void CQuantize::aks_to_M2(
 			Pw[i] *= E;
 		}
 	}
-
-	PROFILE_SAMPLE_AND_LOG(tpf, tpw, "      LPC post filter");
 
 #ifdef DUMP
 	if (dump)
@@ -481,8 +459,6 @@ void CQuantize::aks_to_M2(
 		model->A[m] = Am;
 	}
 	*snr = 10.0*log10f(signal/noise);
-
-	PROFILE_SAMPLE_AND_LOG2(tpf, "      rec");
 }
 
 /*---------------------------------------------------------------------------*\
