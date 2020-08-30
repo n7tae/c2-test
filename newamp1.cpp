@@ -66,7 +66,7 @@ void CNewamp1::mel_sample_freqs_kHz(float rate_K_sample_freqs_kHz[], int K, floa
 	mel = mel_start;
 	for (k=0; k<K; k++)
 	{
-		rate_K_sample_freqs_kHz[k] = 0.7*(POW10F(mel/2595.0) - 1.0);
+		rate_K_sample_freqs_kHz[k] = 0.7*(exp10f(mel/2595.0) - 1.0);
 		mel += step;
 	}
 }
@@ -181,7 +181,7 @@ void CNewamp1::resample_rate_L(C2CONST *c2const, MODEL *model, float rate_K_vec[
 	interp_para(&AmdB[1], rate_K_sample_freqs_kHz_term, rate_K_vec_term, K+2, &rate_L_sample_freqs_kHz[1], model->L);
 	for(m=1; m<=model->L; m++)
 	{
-		model->A[m] = POW10F(AmdB[m]/20.0);
+		model->A[m] = exp10f(AmdB[m]/20.0);
 		// printf("m: %d f: %f AdB: %f A: %f\n", m, rate_L_sample_freqs_kHz[m], AmdB[m], model->A[m]);
 	}
 }

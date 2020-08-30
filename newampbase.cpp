@@ -123,9 +123,9 @@ void CNewampbase::post_filter_newamp1(float vec[], float sample_freq_kHz[], int 
 	{
 		pre[k] = 20.0*log10f(sample_freq_kHz[k]/0.3);
 		vec[k] += pre[k];
-		e_before += POW10F(vec[k]/10.0);
+		e_before += exp10f(vec[k]/10.0);
 		vec[k] *= pf_gain;
-		e_after += POW10F(vec[k]/10.0);
+		e_after += exp10f(vec[k]/10.0);
 	}
 
 	float gain = e_after/e_before;

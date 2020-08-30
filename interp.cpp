@@ -236,7 +236,7 @@ float interp_energy(float prev_e, float next_e)
 
 float interp_energy2(float prev_e, float next_e, float weight)
 {
-	return POW10F((1.0 - weight)*log10f(prev_e) + weight*log10f(next_e));
+	return exp10f((1.0 - weight)*log10f(prev_e) + weight*log10f(next_e));
 
 }
 

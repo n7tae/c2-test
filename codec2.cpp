@@ -1704,7 +1704,7 @@ float codec2_energy_700c(struct CODEC2 *c2, const unsigned char * bits)
 	if (indexes[3] == 0)
 		mean -= 10;
 
-	return POW10F(mean/10.0);
+	return exp10f(mean/10.0);
 }
 
 float codec2_energy_450(struct CODEC2 *c2, const unsigned char * bits)
@@ -1726,7 +1726,7 @@ float codec2_energy_450(struct CODEC2 *c2, const unsigned char * bits)
 	if (indexes[3] == 0)
 		mean -= 10;
 
-	return POW10F(mean/10.0);
+	return exp10f(mean/10.0);
 }
 
 /*---------------------------------------------------------------------------*\
@@ -2573,7 +2573,7 @@ void postfilter(
 	*/
 
 	uv = 0;
-	thresh = POW10F((*bg_est + BG_MARGIN)/20.0);
+	thresh = exp10f((*bg_est + BG_MARGIN)/20.0);
 	if (model->voiced)
 		for(m=1; m<=model->L; m++)
 			if (model->A[m] < thresh)

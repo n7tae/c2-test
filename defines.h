@@ -65,40 +65,36 @@
 
 /* Structure to hold constants calculated at run time based on sample rate */
 
-typedef struct {
+using C2CONST = struct c2const_tag {
     int   Fs;            /* sample rate of this instance             */
     int   n_samp;        /* number of samples per 10ms frame at Fs   */
     int   max_amp;       /* maximum number of harmonics              */
     int   m_pitch;       /* pitch estimation window size in samples  */
     int   p_min;         /* minimum pitch period in samples          */
     int   p_max;         /* maximum pitch period in samples          */
-    float Wo_min;        
-    float Wo_max;  
-    int   nw;            /* analysis window size in samples          */      
+    float Wo_min;
+    float Wo_max;
+    int   nw;            /* analysis window size in samples          */
     int   tw;            /* trapezoidal synthesis window overlap     */
-} C2CONST;
+};
 
 /* Structure to hold model parameters for one frame */
 
-typedef struct {
+using MODEL = struct model_tag {
     float Wo;		  /* fundamental frequency estimate in radians  */
     int   L;		  /* number of harmonics                        */
     float A[MAX_AMP+1];	  /* amplitiude of each harmonic                */
     float phi[MAX_AMP+1]; /* phase of each harmonic                     */
     int   voiced;	  /* non-zero if this frame is voiced           */
-} MODEL;
+};
 
 /* describes each codebook  */
 
 struct lsp_codebook {
-    int			k;        /* dimension of vector	*/
-    int			log2m;    /* number of bits in m	*/
-    int			m;        /* elements in codebook	*/
-#ifdef __EMBEDDED                 /* make sure stored in flash  */
-  const float        *cb;	  /* The elements		*/
-#else
-  float              *cb;	  /* The elements		*/
-#endif
+	int     k; /* dimension of vector  */
+	int log2m; /* number of bits in m  */
+	int     m; /* elements in codebook */
+	float *cb; /* The elements         */
 };
 
 extern const struct lsp_codebook lsp_cb[];
@@ -115,11 +111,5 @@ extern const struct lsp_codebook newamp1vq_cb[];
 extern const struct lsp_codebook newamp1_energy_cb[];
 extern const struct lsp_codebook newamp2vq_cb[];
 extern const struct lsp_codebook newamp2_energy_cb[];
-
-#ifdef _GNU_SOURCE
-    #define POW10F(x) exp10f((x))
-#else
-    #define POW10F(x) expf(2.302585092994046f*(x))
-#endif
 
 #endif

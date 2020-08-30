@@ -612,7 +612,7 @@ void CQuantize::encode_lsps_scalar(int indexes[], float lsp[], int order)
 	int    i,k,m;
 	float  wt[1];
 	float  lsp_hz[order];
-	const float * cb;
+	const float *cb;
 	float se;
 
 	/* convert from radians to Hz so we can use human readable
@@ -648,7 +648,7 @@ void CQuantize::decode_lsps_scalar(float lsp[], int indexes[], int order)
 {
 	int    i,k;
 	float  lsp_hz[order];
-	const float * cb;
+	const float *cb;
 
 	for(i=0; i<order; i++)
 	{
@@ -850,7 +850,7 @@ float CQuantize::decode_energy(int index, int bits)
 
 	step = (e_max - e_min)/e_levels;
 	e    = e_min + step*(index);
-	e    = POW10F(e/10.0);
+	e    = exp10f(e/10.0);
 
 	return e;
 }

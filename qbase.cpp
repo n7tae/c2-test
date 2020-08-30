@@ -130,7 +130,7 @@ void CQbase::decode_WoE(C2CONST *c2const, MODEL *model, float *e, float xq[], in
 
 	model->L  = PI/model->Wo; /* if we quantise Wo re-compute L */
 
-	*e = POW10F(xq[1]/10.0);
+	*e = exp10f(xq[1]/10.0);
 }
 
 void CQbase::compute_weights2(const float *x, const float *xp, float *w)
@@ -243,5 +243,5 @@ float CQbase::decode_log_Wo(C2CONST *c2const, int index, int bits)
 	step = (log10f(Wo_max) - log10f(Wo_min))/Wo_levels;
 	Wo   = log10f(Wo_min) + step*(index);
 
-	return POW10F(Wo);
+	return exp10f(Wo);
 }
