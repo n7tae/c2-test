@@ -16,7 +16,7 @@
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU Lesser General Public License version 2.1, as
-  published by the Free Software Foundation.  This program is
+  published by the free Software Foundation.  This program is
   distributed in the hope that it will be useful, but WITHOUT ANY
   WARRANTY; without even the implied warranty of MERCHANTABILITY or
   FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
@@ -42,8 +42,6 @@
 #include "lsp.h"
 #include "newamp2.h"
 #include "codec2_internal.h"
-
-#include "debug_alloc.h"
 
 #define HPF_BETA 0.125
 #define BPF_N 101
@@ -127,7 +125,7 @@ struct CODEC2 * codec2_create(int mode)
 		return NULL;
 	}
 
-	c2 = (struct CODEC2*)MALLOC(sizeof(struct CODEC2));
+	c2 = (struct CODEC2*)malloc(sizeof(struct CODEC2));
 	if (c2 == NULL)
 		return NULL;
 
@@ -147,30 +145,30 @@ struct CODEC2 * codec2_create(int mode)
 	int n_samp = c2->n_samp = c2->c2const.n_samp;
 	int m_pitch = c2->m_pitch = c2->c2const.m_pitch;
 
-	c2->Pn = (float*)MALLOC(2*n_samp*sizeof(float));
+	c2->Pn = (float*)malloc(2*n_samp*sizeof(float));
 	if (c2->Pn == NULL)
 	{
 		return NULL;
 	}
-	c2->Sn_ = (float*)MALLOC(2*n_samp*sizeof(float));
+	c2->Sn_ = (float*)malloc(2*n_samp*sizeof(float));
 	if (c2->Sn_ == NULL)
 	{
-		FREE(c2->Pn);
+		free(c2->Pn);
 		return NULL;
 	}
-	c2->w = (float*)MALLOC(m_pitch*sizeof(float));
+	c2->w = (float*)malloc(m_pitch*sizeof(float));
 	if (c2->w == NULL)
 	{
-		FREE(c2->Pn);
-		FREE(c2->Sn_);
+		free(c2->Pn);
+		free(c2->Sn_);
 		return NULL;
 	}
-	c2->Sn = (float*)MALLOC(m_pitch*sizeof(float));
+	c2->Sn = (float*)malloc(m_pitch*sizeof(float));
 	if (c2->Sn == NULL)
 	{
-		FREE(c2->Pn);
-		FREE(c2->Sn_);
-		FREE(c2->w);
+		free(c2->Pn);
+		free(c2->Sn_);
+		free(c2->w);
 		return NULL;
 	}
 
@@ -216,7 +214,7 @@ struct CODEC2 * codec2_create(int mode)
 	c2->user_rate_K_vec_no_mean_ = NULL;
 	c2->post_filter_en = 1;
 
-	c2->bpf_buf = (float*)MALLOC(sizeof(float)*(BPF_N+4*c2->n_samp));
+	c2->bpf_buf = (float*)malloc(sizeof(float)*(BPF_N+4*c2->n_samp));
 	assert(c2->bpf_buf != NULL);
 	for(i=0; i<BPF_N+4*c2->n_samp; i++)
 		c2->bpf_buf[i] = 0.0;
@@ -355,7 +353,7 @@ struct CODEC2 * codec2_create(int mode)
 void codec2_destroy(struct CODEC2 *c2)
 {
 	assert(c2 != NULL);
-	FREE(c2->bpf_buf);
+	free(c2->bpf_buf);
 	nlp.nlp_destroy();
 	free(c2->fft_fwd_cfg);
 	free(c2->fftr_fwd_cfg);
@@ -375,11 +373,11 @@ void codec2_destroy(struct CODEC2 *c2)
 		free(c2->phase_fft_fwd_cfg);
 		free(c2->phase_fft_inv_cfg);
 	}
-	FREE(c2->Pn);
-	FREE(c2->Sn);
-	FREE(c2->w);
-	FREE(c2->Sn_);
-	FREE(c2);
+	free(c2->Pn);
+	free(c2->Sn);
+	free(c2->w);
+	free(c2->Sn_);
+	free(c2);
 }
 
 /*---------------------------------------------------------------------------*\
@@ -2145,7 +2143,7 @@ void codec2_set_lpc_post_filter(struct CODEC2 *c2, int enable, int bass_boost, f
 /*
    Allows optional stealing of one of the voicing bits for use as a
    spare bit, only 1300 & 1400 & 1600 bit/s supported for now.
-   Experimental method of sending voice/data frames for FreeDV.
+   Experimental method of sending voice/data frames for freeDV.
 */
 
 int codec2_get_spare_bit_index(struct CODEC2 *c2)
