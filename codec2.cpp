@@ -63,7 +63,7 @@ static CNewamp2 na2;
 \*---------------------------------------------------------------------------*/
 
 void analyse_one_frame(struct CODEC2 *c2, MODEL *model, short speech[]);
-void synthesise_one_frame(struct CODEC2 *c2, short speech[], MODEL *model, COMP Aw[], float gain);
+void synthesise_one_frame(struct CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain);
 void codec2_encode_3200(struct CODEC2 *c2, unsigned char * bits, short speech[]);
 void codec2_decode_3200(struct CODEC2 *c2, short speech[], const unsigned char * bits);
 void codec2_encode_2400(struct CODEC2 *c2, unsigned char * bits, short speech[]);
@@ -570,7 +570,7 @@ void codec2_decode_3200(struct CODEC2 *c2, short speech[], const unsigned char *
 	float   ak[2][LPC_ORD+1];
 	int     i,j;
 	unsigned int nbit = 0;
-	COMP    Aw[FFT_ENC];
+	std::complex<float>    Aw[FFT_ENC];
 
 	assert(c2 != NULL);
 
@@ -718,7 +718,7 @@ void codec2_decode_2400(struct CODEC2 *c2, short speech[], const unsigned char *
 	float   ak[2][LPC_ORD+1];
 	int     i,j;
 	unsigned int nbit = 0;
-	COMP    Aw[FFT_ENC];
+	std::complex<float>    Aw[FFT_ENC];
 
 	assert(c2 != NULL);
 
@@ -899,7 +899,7 @@ void codec2_decode_1600(struct CODEC2 *c2, short speech[], const unsigned char *
 	int     i,j;
 	unsigned int nbit = 0;
 	float   weight;
-	COMP    Aw[FFT_ENC];
+	std::complex<float>    Aw[FFT_ENC];
 
 	assert(c2 != NULL);
 
@@ -1080,7 +1080,7 @@ void codec2_decode_1400(struct CODEC2 *c2, short speech[], const unsigned char *
 	int     i,j;
 	unsigned int nbit = 0;
 	float   weight;
-	COMP    Aw[FFT_ENC];
+	std::complex<float>    Aw[FFT_ENC];
 
 	assert(c2 != NULL);
 
@@ -1260,7 +1260,7 @@ void codec2_decode_1300(struct CODEC2 *c2, short speech[], const unsigned char *
 	int     i,j;
 	unsigned int nbit = 0;
 	float   weight;
-	COMP    Aw[FFT_ENC];
+	std::complex<float>    Aw[FFT_ENC];
 	//PROFILE_VAR(recover_start);
 
 	assert(c2 != NULL);
@@ -1471,7 +1471,7 @@ void codec2_decode_1200(struct CODEC2 *c2, short speech[], const unsigned char *
 	int     i,j;
 	unsigned int nbit = 0;
 	float   weight;
-	COMP    Aw[FFT_ENC];
+	std::complex<float>    Aw[FFT_ENC];
 
 	assert(c2 != NULL);
 
@@ -1649,10 +1649,10 @@ void codec2_decode_700c(struct CODEC2 *c2, short speech[], const unsigned char *
 	indexes[3] = qt.unpack_natural_or_gray(bits, &nbit, 6, 0);
 
 	int M = 4;
-	COMP  HH[M][MAX_AMP+1];
+	std::complex<float>  HH[M][MAX_AMP+1];
 	float interpolated_surface_[M][NEWAMP1_K];
 
-	na1.newamp1_indexes_to_model(&c2->c2const, model, (COMP*)HH, (float*)interpolated_surface_, c2->prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->rate_K_sample_freqs_kHz, NEWAMP1_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, c2->user_rate_K_vec_no_mean_, c2->post_filter_en);
+	na1.newamp1_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->rate_K_sample_freqs_kHz, NEWAMP1_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, c2->user_rate_K_vec_no_mean_, c2->post_filter_en);
 
 
 	for(i=0; i<M; i++)
@@ -1950,11 +1950,11 @@ void codec2_decode_450(struct CODEC2 *c2, short speech[], const unsigned char * 
 	indexes[3] = qt.unpack_natural_or_gray(bits, &nbit, 6, 0);
 
 	int M = 4;
-	COMP  HH[M][MAX_AMP+1];
+	std::complex<float>  HH[M][MAX_AMP+1];
 	float interpolated_surface_[M][NEWAMP2_K];
 	int pwbFlag = 0;
 
-	na2.newamp2_indexes_to_model(&c2->c2const, model, (COMP*)HH, (float*)interpolated_surface_, c2->n2_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_rate_K_sample_freqs_kHz, NEWAMP2_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, 1.5, pwbFlag);
+	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_rate_K_sample_freqs_kHz, NEWAMP2_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, 1.5, pwbFlag);
 
 
 	for(i=0; i<M; i++)
@@ -1991,11 +1991,11 @@ void codec2_decode_450pwb(struct CODEC2 *c2, short speech[], const unsigned char
 	indexes[3] = qt.unpack_natural_or_gray(bits, &nbit, 6, 0);
 
 	int M = 4;
-	COMP  HH[M][MAX_AMP+1];
+	std::complex<float>  HH[M][MAX_AMP+1];
 	float interpolated_surface_[M][NEWAMP2_16K_K];
 	int pwbFlag = 1;
 
-	na2.newamp2_indexes_to_model(&c2->c2const, model, (COMP*)HH, (float*)interpolated_surface_, c2->n2_pwb_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, 1.5, pwbFlag);
+	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_pwb_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, 1.5, pwbFlag);
 
 
 	for(i=0; i<M; i++)
@@ -2015,20 +2015,20 @@ void codec2_decode_450pwb(struct CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-void synthesise_one_frame(struct CODEC2 *c2, short speech[], MODEL *model, COMP Aw[], float gain)
+void synthesise_one_frame(struct CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain)
 {
 	int     i;
 
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode) || CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode) || CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode)  )
 	{
 		/* newamp1/2, we've already worked out rate L phase */
-		COMP *H = Aw;
+		std::complex<float> *H = Aw;
 		phase_synth_zero_order(c2->n_samp, model, &c2->ex_phase, H);
 	}
 	else
 	{
 		/* LPC based phase synthesis */
-		COMP H[MAX_AMP+1];
+		std::complex<float> H[MAX_AMP+1];
 		sample_phase(model, H, Aw);
 		phase_synth_zero_order(c2->n_samp, model, &c2->ex_phase, H);
 	}
@@ -2069,7 +2069,7 @@ void synthesise_one_frame(struct CODEC2 *c2, short speech[], MODEL *model, COMP 
 
 void analyse_one_frame(struct CODEC2 *c2, MODEL *model, short speech[])
 {
-	COMP    Sw[FFT_ENC];
+	std::complex<float>    Sw[FFT_ENC];
 	float   pitch;
 	int     i;
 	int     n_samp = c2->n_samp;
@@ -2323,8 +2323,8 @@ void codec2_700c_eq(struct CODEC2 *codec2_state, int en)
 \*---------------------------------------------------------------------------*/
 
 void sample_phase(MODEL *model,
-				  COMP H[],
-				  COMP A[]        /* LPC analysis filter in freq domain */
+				  std::complex<float> H[],
+				  std::complex<float> A[]        /* LPC analysis filter in freq domain */
 )
 {
 	int   m, b;
@@ -2337,8 +2337,7 @@ void sample_phase(MODEL *model,
 	for(m=1; m<=model->L; m++)
 	{
 		b = (int)(m*model->Wo/r + 0.5);
-		H[m].real = A[b].real;
-		H[m].imag - -A[b].imag;
+		H[m] = std::conj(A[b]);
 	}
 }
 
@@ -2438,14 +2437,14 @@ void phase_synth_zero_order(
 	int    n_samp,
 	MODEL *model,
 	float *ex_phase,            /* excitation phase of fundamental        */
-	COMP   H[]                  /* L synthesis filter freq domain samples */
+	std::complex<float>   H[]                  /* L synthesis filter freq domain samples */
 
 )
 {
 	int   m;
 	float new_phi;
-	COMP  Ex[MAX_AMP+1];	  /* excitation samples */
-	COMP  A_[MAX_AMP+1];	  /* synthesised harmonic samples */
+	std::complex<float>  Ex[MAX_AMP+1];	  /* excitation samples */
+	std::complex<float>  A_[MAX_AMP+1];	  /* synthesised harmonic samples */
 
 	/*
 	   Update excitation fundamental phase track, this sets the position
@@ -2466,9 +2465,7 @@ void phase_synth_zero_order(
 
 		if (model->voiced)
 		{
-
-			Ex[m].real = cosf(ex_phase[0]*m);
-			Ex[m].imag = sinf(ex_phase[0]*m);
+			Ex[m] = std::polar(1.0f, ex_phase[0] * m);
 		}
 		else
 		{
@@ -2478,18 +2475,17 @@ void phase_synth_zero_order(
 			   keeping it.
 			*/
 			float phi = TWO_PI*(float)codec2_rand()/CODEC2_RAND_MAX;
-			Ex[m].real = cosf(phi);
-			Ex[m].imag = sinf(phi);
+			Ex[m] = std::polar(1.0f, phi);
 		}
 
 		/* filter using LPC filter */
 
-		A_[m].real = H[m].real*Ex[m].real - H[m].imag*Ex[m].imag;
-		A_[m].imag = H[m].imag*Ex[m].real + H[m].real*Ex[m].imag;
+		A_[m].real(H[m].real() * Ex[m].real() - H[m].imag() * Ex[m].imag());
+		A_[m].imag(H[m].imag() * Ex[m].real() + H[m].real() * Ex[m].imag());
 
 		/* modify sinusoidal phase */
 
-		new_phi = atan2f(A_[m].imag, A_[m].real+1E-12);
+		new_phi = atan2f(A_[m].imag(), A_[m].real()+1E-12);
 		model->phi[m] = new_phi;
 	}
 
@@ -2639,7 +2635,7 @@ C2CONST c2const_create(int Fs, float framelength_s)
 void make_analysis_window(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, float w[], float W[])
 {
 	float m;
-	COMP  wshift[FFT_ENC];
+	std::complex<float>  wshift[FFT_ENC];
 	int   i,j;
 	int   m_pitch = c2const->m_pitch;
 	int   nw      = c2const->nw;
@@ -2696,17 +2692,16 @@ void make_analysis_window(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, float w[],
 	     nw/2              nw/2
 	*/
 
-	COMP temp[FFT_ENC];
+	std::complex<float> temp[FFT_ENC];
 
 	for(i=0; i<FFT_ENC; i++)
 	{
-		wshift[i].real = 0.0;
-		wshift[i].imag = 0.0;
+		wshift[i] = std::complex<float>(0.0f, 0.0f);
 	}
 	for(i=0; i<nw/2; i++)
-		wshift[i].real = w[i+m_pitch/2];
+		wshift[i].real(w[i+m_pitch/2]);
 	for(i=FFT_ENC-nw/2,j=m_pitch/2-nw/2; i<FFT_ENC; i++,j++)
-		wshift[i].real = w[j];
+		wshift[i].real(w[j]);
 
 	codec2_fft(fft_fwd_cfg, wshift, temp);
 
@@ -2736,8 +2731,8 @@ void make_analysis_window(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, float w[],
 
 	for(i=0; i<FFT_ENC/2; i++)
 	{
-		W[i] = temp[i + FFT_ENC / 2].real;
-		W[i + FFT_ENC / 2] = temp[i].real;
+		W[i] = temp[i + FFT_ENC / 2].real();
+		W[i + FFT_ENC / 2] = temp[i].real();
 	}
 
 }
@@ -2752,15 +2747,14 @@ void make_analysis_window(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, float w[],
 
 \*---------------------------------------------------------------------------*/
 
-void dft_speech(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, COMP Sw[], float Sn[], float w[])
+void dft_speech(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[])
 {
     int  i;
     int  m_pitch = c2const->m_pitch;
     int   nw      = c2const->nw;
 
     for(i=0; i<FFT_ENC; i++) {
-        Sw[i].real = 0.0;
-        Sw[i].imag = 0.0;
+		Sw[i] = std::complex<float>(0.0f, 0.0f);
     }
 
     /* Centre analysis window on time axis, we need to arrange input
@@ -2769,12 +2763,12 @@ void dft_speech(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, COMP Sw[], float Sn[
     /* move 2nd half to start of FFT input vector */
 
     for(i=0; i<nw/2; i++)
-        Sw[i].real = Sn[i+m_pitch/2]*w[i+m_pitch/2];
+        Sw[i].real(Sn[i+m_pitch/2]*w[i+m_pitch/2]);
 
     /* move 1st half to end of FFT input vector */
 
     for(i=0; i<nw/2; i++)
-        Sw[FFT_ENC-nw/2+i].real = Sn[i+m_pitch/2-nw/2]*w[i+m_pitch/2-nw/2];
+        Sw[FFT_ENC-nw/2+i].real(Sn[i+m_pitch/2-nw/2]*w[i+m_pitch/2-nw/2]);
 
     codec2_fft_inplace(fft_fwd_cfg, Sw);
 }
@@ -2790,7 +2784,7 @@ void dft_speech(C2CONST *c2const, kiss_fft_cfg fft_fwd_cfg, COMP Sw[], float Sn[
 
 \*---------------------------------------------------------------------------*/
 
-void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, COMP Sw[])
+void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<float> Sw[])
 {
 	float pmin,pmax,pstep;	/* pitch refinment minimum, maximum and step */
 
@@ -2842,7 +2836,7 @@ void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, COMP Sw[])
 
 \*---------------------------------------------------------------------------*/
 
-void hs_pitch_refinement(MODEL *model, COMP Sw[], float pmin, float pmax, float pstep)
+void hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float pmin, float pmax, float pstep)
 {
 	int m;		/* loop variable */
 	int b;		/* bin for current harmonic centre */
@@ -2872,7 +2866,7 @@ void hs_pitch_refinement(MODEL *model, COMP Sw[], float pmin, float pmax, float 
 		for(m=1; m<=model->L; m++)
 		{
 			b = (int)(m*Wo*one_on_r + 0.5);
-			E += Sw[b].real*Sw[b].real + Sw[b].imag*Sw[b].imag;
+			E += Sw[b].real() * Sw[b].real() + Sw[b].imag() * Sw[b].imag();
 		}
 		/* Compare to see if this is a maximum */
 
@@ -2896,7 +2890,7 @@ void hs_pitch_refinement(MODEL *model, COMP Sw[], float pmin, float pmax, float 
 
 \*---------------------------------------------------------------------------*/
 
-void estimate_amplitudes(MODEL *model, COMP Sw[], float W[], int est_phase)
+void estimate_amplitudes(MODEL *model, std::complex<float> Sw[], float W[], int est_phase)
 {
 	int   i,m;		/* loop variables */
 	int   am,bm;		/* bounds of current harmonic */
@@ -2915,7 +2909,7 @@ void estimate_amplitudes(MODEL *model, COMP Sw[], float W[], int est_phase)
 
 		for(i=am; i<bm; i++)
 		{
-			den += Sw[i].real*Sw[i].real + Sw[i].imag*Sw[i].imag;
+			den += Sw[i].real() * Sw[i].real() + Sw[i].imag() * Sw[i].imag();
 		}
 
 		model->A[m] = sqrtf(den);
@@ -2927,7 +2921,7 @@ void estimate_amplitudes(MODEL *model, COMP Sw[], float W[], int est_phase)
 			/* Estimate phase of harmonic, this is expensive in CPU for
 			   embedded devicesso we make it an option */
 
-			model->phi[m] = atan2f(Sw[b].imag,Sw[b].real);
+			model->phi[m] = atan2f(Sw[b].imag(), Sw[b].real());
 		}
 	}
 }
@@ -2946,12 +2940,12 @@ void estimate_amplitudes(MODEL *model, COMP Sw[], float W[], int est_phase)
 float est_voicing_mbe(
 	C2CONST *c2const,
 	MODEL *model,
-	COMP   Sw[],
+	std::complex<float>   Sw[],
 	float  W[]
 )
 {
 	int   l,al,bl,m;    /* loop variables */
-	COMP  Am;             /* amplitude sample for this band */
+	std::complex<float>  Am;             /* amplitude sample for this band */
 	int   offset;         /* centers Hw[] about current harmonic */
 	float den;            /* denominator of Am expression */
 	float error;          /* accumulated error between original and synthesised */
@@ -2959,9 +2953,7 @@ float est_voicing_mbe(
 	float sig, snr;
 	float elow, ehigh, eratio;
 	float sixty;
-	COMP   Ew;
-	Ew.real = 0;
-	Ew.imag = 0;
+	std::complex<float> Ew(0, 0);
 
 	int l_1000hz = model->L*1000.0/(c2const->Fs/2);
 	sig = 1E-4;
@@ -2977,8 +2969,7 @@ float est_voicing_mbe(
 
 	for(l=1; l<=l_1000hz; l++)
 	{
-		Am.real = 0.0;
-		Am.imag = 0.0;
+		Am = std::complex<float>(0.0f, 0.0f);
 		den = 0.0;
 		al = ceilf((l - 0.5)*Wo*FFT_ENC/TWO_PI);
 		bl = ceilf((l + 0.5)*Wo*FFT_ENC/TWO_PI);
@@ -2988,22 +2979,18 @@ float est_voicing_mbe(
 		offset = FFT_ENC/2 - l*Wo*FFT_ENC/TWO_PI + 0.5;
 		for(m=al; m<bl; m++)
 		{
-			Am.real += Sw[m].real*W[offset+m];
-			Am.imag += Sw[m].imag*W[offset+m];
+			Am += W[offset+m] * Sw[m];
 			den += W[offset+m]*W[offset+m];
 		}
 
-		Am.real = Am.real/den;
-		Am.imag = Am.imag/den;
+		Am /= den;
 
 		/* Determine error between estimated harmonic and original */
 
 		for(m=al; m<bl; m++)
 		{
-			Ew.real = Sw[m].real - Am.real*W[offset+m];
-			Ew.imag = Sw[m].imag - Am.imag*W[offset+m];
-			error += Ew.real*Ew.real;
-			error += Ew.imag*Ew.imag;
+			Ew = Sw[m] - (W[offset+m] * Am);
+			error += Ew.real() * Ew.real() + Ew.imag() * Ew.imag();
 		}
 	}
 
@@ -3121,7 +3108,7 @@ void synthesise(
 )
 {
 	int   i,l,j,b;	        /* loop variables */
-	COMP  Sw_[FFT_DEC/2+1];	/* DFT of synthesised signal */
+	std::complex<float>  Sw_[FFT_DEC/2+1];	/* DFT of synthesised signal */
 	float sw_[FFT_DEC];	        /* synthesised signal */
 
 	if (shift)
@@ -3136,8 +3123,8 @@ void synthesise(
 
 	for(i=0; i<FFT_DEC/2+1; i++)
 	{
-		Sw_[i].real = 0.0;
-		Sw_[i].imag = 0.0;
+		Sw_[i].real(0);
+		Sw_[i].imag(0);
 	}
 
 	/* Now set up frequency domain synthesised speech */
@@ -3149,8 +3136,7 @@ void synthesise(
 		{
 			b = (FFT_DEC/2)-1;
 		}
-		Sw_[b].real = model->A[l]*cosf(model->phi[l]);
-		Sw_[b].imag = model->A[l]*sinf(model->phi[l]);
+		Sw_[b] = std::polar(model->A[l], model->phi[l]);
 	}
 
 	/* Perform inverse DFT */

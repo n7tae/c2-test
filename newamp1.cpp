@@ -344,7 +344,7 @@ void CNewamp1::newamp1_indexes_to_rate_K_vec(float rate_K_vec_[], float rate_K_v
 
 \*---------------------------------------------------------------------------*/
 
-void CNewamp1::newamp1_indexes_to_model(C2CONST *c2const, MODEL model_[], COMP H[], float *interpolated_surface_, float  prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float  rate_K_sample_freqs_kHz[], int K, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg, int indexes[], float  user_rate_K_vec_no_mean_[], int post_filter_en)
+void CNewamp1::newamp1_indexes_to_model(C2CONST *c2const, MODEL model_[], std::complex<float> H[], float *interpolated_surface_, float  prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float  rate_K_sample_freqs_kHz[], int K, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg, int indexes[], float  user_rate_K_vec_no_mean_[], int post_filter_en)
 {
 	float rate_K_vec_[K], rate_K_vec_no_mean_[K], mean_, Wo_right;
 	int   voicing_right, k;

@@ -26,13 +26,14 @@
 #ifndef __QUANTISE__
 #define __QUANTISE__
 
+#include <complex>
+
 #include "codec2_fft.h"
-#include "comp.h"
 #include "qbase.h"
 
 class CQuantize : public CQbase {
 public:
-	void aks_to_M2(kiss_fftr_cfg fftr_fwd_cfg, float ak[], int order, MODEL *model, float E, float *snr, int dump, int sim_pf, int pf, int bass_boost, float beta, float gamma, COMP Aw[]);
+	void aks_to_M2(kiss_fftr_cfg fftr_fwd_cfg, float ak[], int order, MODEL *model, float E, float *snr, int dump, int sim_pf, int pf, int bass_boost, float beta, float gamma, std::complex<float> Aw[]);
 
 	int   encode_Wo(C2CONST *c2const, float Wo, int bits);
 	float decode_Wo(C2CONST *c2const, int index, int bits);

@@ -27,7 +27,7 @@
 #define __DUMP__
 
 #include "defines.h"
-#include "comp.h"
+#include <complex>
 #include "codec2_fft.h"
 #include "codec2_internal.h"
 
@@ -35,16 +35,16 @@ void dump_on(char filename_prefix[]);
 void dump_off();
 
 void dump_Sn(int m_pitch, float Sn[]);
-void dump_Sw(COMP Sw[]);
-void dump_Sw_(COMP Sw_[]);
-void dump_Ew(COMP Ew[]);
+void dump_Sw(std::complex<float> Sw[]);
+void dump_Sw_(std::complex<float> Sw_[]);
+void dump_Ew(std::complex<float> Ew[]);
 void dump_softdec(float *softdec, int n);
 
 /* amplitude modelling */
 
 void dump_model(MODEL *m);
 void dump_quantised_model(MODEL *m);
-void dump_Pwn(COMP Pw[]);
+void dump_Pwn(std::complex<float> Pw[]);
 void dump_Pw(float Pw[]);
 void dump_Rw(float Rw[]);
 void dump_lsp(float lsp[]);
@@ -67,8 +67,8 @@ void dump_hephase(int ind[], int dim);
 /* NLP states */
 
 void dump_sq(int m_pitch, float sq[]);
-void dump_dec(COMP Fw[]);
-void dump_Fw(COMP Fw[]);
+void dump_dec(std::complex<float> Fw[]);
+void dump_Fw(std::complex<float> Fw[]);
 void dump_e(float e_hz[]);
 #if 0
 void dump_Rk(float Rk[]);

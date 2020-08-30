@@ -204,7 +204,7 @@ void CNewampbase::interp_Wo_v(float Wo_[], int L_[], int voicing_[], float Wo1, 
 
 \*---------------------------------------------------------------------------*/
 
-void CNewampbase::determine_phase(C2CONST *c2const, COMP H[], MODEL *model, int Nfft, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg)
+void CNewampbase::determine_phase(C2CONST *c2const, std::complex<float> H[], MODEL *model, int Nfft, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg)
 {
 	int i,m,b;
 	int Ns = Nfft/2+1;
@@ -229,8 +229,7 @@ void CNewampbase::determine_phase(C2CONST *c2const, COMP H[], MODEL *model, int 
 	for(m=1; m<=model->L; m++)
 	{
 		b = floorf(0.5+m*model->Wo*Nfft/(2.0*M_PI));
-		H[m].real = cosf(phase[b]);
-		H[m].imag = sinf(phase[b]);
+		H[m] = std::polar(1.0f, phase[b]);
 	}
 }
 
@@ -255,19 +254,18 @@ void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples i
 				  kiss_fft_cfg fft_inv_cfg
 				 )
 {
-	COMP Sdb[Nfft], c[Nfft], cf[Nfft], Cf[Nfft];
+	std::complex<float> Sdb[Nfft], c[Nfft], cf[Nfft], Cf[Nfft];
 	int  Ns = Nfft/2+1;
 	int  i;
 
 	/* install negative frequency components, 1/Nfft takes into
 	   account kiss fft lack of scaling on ifft */
 
-	Sdb[0].real = Gdbfk[0];
-	Sdb[0].imag = 0.0;
+	Sdb[0].real(Gdbfk[0]);
+	Sdb[0].imag(0);
 	for(i=1; i<Ns; i++)
 	{
-		Sdb[i].real = Sdb[Nfft-i].real = Gdbfk[i];
-		Sdb[i].imag = Sdb[Nfft-i].imag = 0.0;
+		Sdb[i] = Sdb[Nfft-i] = std::complex<float>(Gdbfk[i], 0);
 	}
 
 	/* compute real cepstrum from log magnitude spectrum */
@@ -275,8 +273,7 @@ void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples i
 	codec2_fft(fft_inv_cfg, Sdb, c);
 	for(i=0; i<Nfft; i++)
 	{
-		c[i].real /= (float)Nfft;
-		c[i].imag /= (float)Nfft;
+		c[i] /= (float)Nfft;
 	}
 
 	/* Fold cepstrum to reflect non-min-phase zeros inside unit circle */
@@ -285,14 +282,13 @@ void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples i
 	for(i=1; i<Ns-1; i++)
 	{
 		auto j = Nfft - i;
-		cf[i].real = c[i].real + c[j].real;
-		cf[i].imag = c[i].imag + c[j].imag;
+		cf[i] += c[j];
 	}
 	cf[Ns-1] = c[Ns-1];
 	for(i=Ns; i<Nfft; i++)
 	{
-		cf[i].real = 0.0;
-		cf[i].imag = 0.0;
+		cf[i].real(0);
+		cf[i].imag(0);
 	}
 
 	/* Cf = dB_magnitude + j * minimum_phase */
@@ -307,6 +303,6 @@ void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples i
 
 	for(i=0; i<Ns; i++)
 	{
-		phase[i] = Cf[i].imag/scale;
+		phase[i] = Cf[i].imag() / scale;
 	}
 }

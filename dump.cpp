@@ -24,7 +24,6 @@
 */
 
 #include "defines.h"
-#include "comp.h"
 #include "dump.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -167,7 +166,7 @@ void dump_Sn(int m_pitch, float Sn[])
 	fprintf(fsn,"\n");
 }
 
-void dump_Sw(COMP Sw[])
+void dump_Sw(std::complex<float> Sw[])
 {
 	int i;
 	char s[MAX_STR + 7];
@@ -187,7 +186,7 @@ void dump_Sw(COMP Sw[])
 	fprintf(fsw,"\n");
 }
 
-void dump_Sw_(COMP Sw_[])
+void dump_Sw_(std::complex<float> Sw_[])
 {
 	int i;
 	char s[MAX_STR + 8];
@@ -207,7 +206,7 @@ void dump_Sw_(COMP Sw_[])
 	fprintf(fsw_,"\n");
 }
 
-void dump_Ew(COMP Ew[])
+void dump_Ew(std::complex<float> Ew[])
 {
 	int i;
 	char s[MAX_STR + 7];
@@ -601,7 +600,7 @@ void dump_ak_(float ak_[], int order)
 	fprintf(fak_,"\n");
 }
 
-void dump_Fw(COMP Fw[])
+void dump_Fw(std::complex<float> Fw[])
 {
 	int i;
 	char s[MAX_STR + 7];
@@ -664,7 +663,7 @@ void dump_sq(int m_pitch, float sq[])
 	fprintf(fsq,"\n");
 }
 
-void dump_dec(COMP Fw[])
+void dump_dec(std::complex<float> Fw[])
 {
 	int i;
 	char s[MAX_STR + 8];

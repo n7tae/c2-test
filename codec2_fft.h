@@ -13,20 +13,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <complex>
 
 #include "defines.h"
-#include "comp.h"
-
 
 #include "kiss_fftr.h"
 #include "kiss_fft.h"
 
-static inline void codec2_fftr(kiss_fftr_cfg cfg, float* in, COMP* out)
+static inline void codec2_fftr(kiss_fftr_cfg cfg, float* in, std::complex<float>* out)
 {
     kiss_fftr(cfg, in, (kiss_fft_cpx*)out);
 }
 
-static inline void codec2_fftri(kiss_fftr_cfg cfg, COMP* in, float* out)
+static inline void codec2_fftri(kiss_fftr_cfg cfg, std::complex<float>* in, float* out)
 {
     kiss_fftri(cfg, (kiss_fft_cpx*)in, out);
 }
@@ -37,12 +36,12 @@ void codec2_fft_free(kiss_fft_cfg cfg);
 void codec2_fftr_free(kiss_fftr_cfg cfg);
 
 
-static inline void codec2_fft(kiss_fft_cfg cfg, COMP* in, COMP* out)
+static inline void codec2_fft(kiss_fft_cfg cfg, std::complex<float>* in, std::complex<float>* out)
 {
       kiss_fft(cfg, (kiss_fft_cpx*)in, (kiss_fft_cpx*)out);
 }
 
-void codec2_fft_inplace(kiss_fft_cfg cfg, COMP* inout);
+void codec2_fft_inplace(kiss_fft_cfg cfg, std::complex<float>* inout);
 
 
 #endif

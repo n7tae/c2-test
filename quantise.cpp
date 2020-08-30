@@ -248,7 +248,7 @@ void CQuantize::lpc_post_filter(kiss_fftr_cfg fftr_fwd_cfg, float Pw[], float ak
 {
 	int   i;
 	float x[FFT_ENC];   /* input to FFTs                */
-	COMP  Ww[FFT_ENC/2+1];  /* weighting spectrum           */
+	std::complex<float>  Ww[FFT_ENC/2+1];  /* weighting spectrum           */
 	float Rw[FFT_ENC/2+1];  /* R = WA                       */
 	float e_before, e_after, gain;
 	float Pfw;
@@ -278,7 +278,7 @@ void CQuantize::lpc_post_filter(kiss_fftr_cfg fftr_fwd_cfg, float Pw[], float ak
 
 	for(i=0; i<FFT_ENC/2; i++)
 	{
-		Ww[i].real = Ww[i].real*Ww[i].real + Ww[i].imag*Ww[i].imag;
+		Ww[i].real(Ww[i].real() * Ww[i].real() + Ww[i].imag() * Ww[i].imag());
 	}
 
 	PROFILE_SAMPLE_AND_LOG(tww, tfft2, "        Ww");
@@ -289,7 +289,7 @@ void CQuantize::lpc_post_filter(kiss_fftr_cfg fftr_fwd_cfg, float Pw[], float ak
 	min_Rw = 1E32;
 	for(i=0; i<FFT_ENC/2; i++)
 	{
-		Rw[i] = sqrtf(Ww[i].real * Pw[i]);
+		Rw[i] = sqrtf(Ww[i].real() * Pw[i]);
 		if (Rw[i] > max_Rw)
 			max_Rw = Rw[i];
 		if (Rw[i] < min_Rw)
@@ -374,7 +374,7 @@ void CQuantize::aks_to_M2(
 	int           bass_boost,  /* enable LPC filter 0-1kHz 3dB boost */
 	float         beta,
 	float         gamma,       /* LPC post filter parameters */
-	COMP          Aw[]         /* output power spectrum */
+	std::complex<float>          Aw[]         /* output power spectrum */
 )
 {
 	int i,m;		/* loop variables */
@@ -408,26 +408,10 @@ void CQuantize::aks_to_M2(
 
 	float Pw[FFT_ENC/2];
 
-#ifndef FDV_ARM_MATH
 	for(i=0; i<FFT_ENC/2; i++)
 	{
-		Pw[i] = 1.0/(Aw[i].real*Aw[i].real + Aw[i].imag*Aw[i].imag + 1E-6);
+		Pw[i] = 1.0/(Aw[i].real() * Aw[i].real() + Aw[i].imag() * Aw[i].imag() + 1E-6);
 	}
-#else
-	// this difference may seem strange, but the gcc for STM32F4 generates almost 5 times
-	// faster code with the two loops: 1120 ms -> 242 ms
-	// so please leave it as is or improve further
-	// since this code is called 4 times it results in almost 4ms gain (21ms -> 17ms per audio frame decode @ 1300 )
-
-	for(i=0; i<FFT_ENC/2; i++)
-	{
-		Pw[i] = Aw[i].real * Aw[i].real + Aw[i].imag * Aw[i].imag  + 1E-6;
-	}
-	for(i=0; i<FFT_ENC/2; i++)
-	{
-		Pw[i] = 1.0/(Pw[i]);
-	}
-#endif
 
 	PROFILE_SAMPLE_AND_LOG(tpw, tfft, "      Pw");
 

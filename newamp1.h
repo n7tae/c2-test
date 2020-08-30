@@ -35,9 +35,9 @@
 #define NEWAMP1_K           20   /* rate K vector length                            */
 #define NEWAMP1_VQ_MBEST_DEPTH 5 /* how many candidates we keep for each stage of mbest search */
 
+#include <complex>
 
 #include "codec2_fft.h"
-#include "comp.h"
 #include "newampbase.h"
 
 class CNewamp1 : public CNewampbase
@@ -45,7 +45,7 @@ class CNewamp1 : public CNewampbase
 public:
 	void mel_sample_freqs_kHz(float rate_K_sample_freqs_kHz[], int K, float mel_start, float mel_end);
 	void newamp1_model_to_indexes(C2CONST *c2const, int indexes[], MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K, float *mean, float rate_K_vec_no_mean[], float rate_K_vec_no_mean_[], float *se, float *eq, int eq_en);
-	void newamp1_indexes_to_model(C2CONST *c2const, MODEL  model_[], COMP H[], float  interpolated_surface_[], float  prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float rate_K_sample_freqs_kHz[], int K, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg, int indexes[], float user_rate_K_vec_no_mean_[], int post_filter_en);
+	void newamp1_indexes_to_model(C2CONST *c2const, MODEL  model_[], std::complex<float> H[], float  interpolated_surface_[], float  prev_rate_K_vec_[], float *Wo_left, int *voicing_left, float rate_K_sample_freqs_kHz[], int K, kiss_fft_cfg fwd_cfg, kiss_fft_cfg inv_cfg, int indexes[], float user_rate_K_vec_no_mean_[], int post_filter_en);
 	float ftomel(float fHz);
 	void resample_rate_L(C2CONST *c2const, MODEL *model, float rate_K_vec[], float rate_K_sample_freqs_kHz[], int K);
 

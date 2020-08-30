@@ -39,7 +39,7 @@ void codec2_fftr_free(kiss_fftr_cfg cfg)
 // not noticeable
 // the reduced usage of RAM and increased performance on STM32 platforms
 // should be worth it.
-void codec2_fft_inplace(kiss_fft_cfg cfg, COMP* inout)
+void codec2_fft_inplace(kiss_fft_cfg cfg, std::complex<float>* inout)
 {
 	kiss_fft_cpx in[512];
 	// decide whether to use the local stack based buffer for in

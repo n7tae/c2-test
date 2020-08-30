@@ -28,7 +28,7 @@
 #ifndef __NLP__
 #define __NLP__
 
-#include "comp.h"
+#include <complex>
 #include "codec2_fft.h"
 
 #include <vector>
@@ -74,10 +74,10 @@ class Cnlp {
 public:
 	void nlp_create(C2CONST *c2const);
 	void nlp_destroy();
-	float nlp(float Sn[], int n, float *pitch_samples, COMP Sw[], float W[], float *prev_f0);
+	float nlp(float Sn[], int n, float *pitch_samples, std::complex<float> Sw[], float W[], float *prev_f0);
 
 private:
-	float post_process_sub_multiples(COMP Fw[], int pmin, int pmax, float gmax, int gmax_bin, float *prev_f0);
+	float post_process_sub_multiples(std::complex<float> Fw[], int pmin, int pmax, float gmax, int gmax_bin, float *prev_f0);
 	void fdmdv_16_to_8(float out8k[], float in16k[], int n);
 
 	NLP snlp;

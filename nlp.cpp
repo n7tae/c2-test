@@ -197,13 +197,13 @@ float Cnlp::nlp(
 	float  Sn[],   /* input speech vector                                */
 	int    n,      /* frames shift (no. new samples in Sn[])             */
 	float *pitch,  /* estimated pitch period in samples at current Fs    */
-	COMP   Sw[],   /* Freq domain version of Sn[]                        */
+	std::complex<float>   Sw[],   /* Freq domain version of Sn[]                        */
 	float  W[],    /* Freq domain window                                 */
 	float *prev_f0 /* previous pitch f0 in Hz, memory for pitch tracking */
 )
 {
 	float  notch;		    /* current notch filter output          */
-	COMP   Fw[PE_FFT_SIZE]; /* DFT of squared signal (input/output) */
+	std::complex<float>   Fw[PE_FFT_SIZE]; /* DFT of squared signal (input/output) */
 	float  gmax;
 	int    gmax_bin;
 	int    m, i, j;
@@ -292,12 +292,12 @@ float Cnlp::nlp(
 
 	for(i=0; i<PE_FFT_SIZE; i++)
 	{
-		Fw[i].real = 0.0;
-		Fw[i].imag = 0.0;
+		Fw[i].real(0);
+		Fw[i].imag(0);
 	}
 	for(i=0; i<m/DEC; i++)
 	{
-		Fw[i].real = snlp.sq[i*DEC]*snlp.w[i];
+		Fw[i].real(snlp.sq[i*DEC]*snlp.w[i]);
 	}
 	PROFILE_SAMPLE_AND_LOG(window, filter, "      window");
 #ifdef DUMP
@@ -310,7 +310,7 @@ float Cnlp::nlp(
 	PROFILE_SAMPLE_AND_LOG(fft, window, "      fft");
 
 	for(i=0; i<PE_FFT_SIZE; i++)
-		Fw[i].real = Fw[i].real*Fw[i].real + Fw[i].imag*Fw[i].imag;
+		Fw[i].real(Fw[i].real() * Fw[i].real() + Fw[i].imag() * Fw[i].imag());
 
 	PROFILE_SAMPLE_AND_LOG(magsq, fft, "      mag sq");
 #ifdef DUMP
@@ -329,9 +329,9 @@ float Cnlp::nlp(
 	gmax_bin = PE_FFT_SIZE*DEC/pmax;
 	for(i=PE_FFT_SIZE*DEC/pmax; i<=PE_FFT_SIZE*DEC/pmin; i++)
 	{
-		if (Fw[i].real > gmax)
+		if (Fw[i].real() > gmax)
 		{
-			gmax = Fw[i].real;
+			gmax = Fw[i].real();
 			gmax_bin = i;
 		}
 	}
@@ -381,7 +381,7 @@ float Cnlp::nlp(
 
 \*---------------------------------------------------------------------------*/
 
-float Cnlp::post_process_sub_multiples(COMP Fw[], int pmin, int pmax, float gmax, int gmax_bin, float *prev_f0)
+float Cnlp::post_process_sub_multiples(std::complex<float> Fw[], int pmin, int pmax, float gmax, int gmax_bin, float *prev_f0)
 {
 	int   min_bin, cmax_bin;
 	int   mult;
@@ -417,14 +417,14 @@ float Cnlp::post_process_sub_multiples(COMP Fw[], int pmin, int pmax, float gmax
 		lmax = 0;
 		lmax_bin = bmin;
 		for (b=bmin; b<=bmax; b++) 	     /* look for maximum in interval */
-			if (Fw[b].real > lmax)
+			if (Fw[b].real() > lmax)
 			{
-				lmax = Fw[b].real;
+				lmax = Fw[b].real();
 				lmax_bin = b;
 			}
 
 		if (lmax > thresh)
-			if ((lmax > Fw[lmax_bin-1].real) && (lmax > Fw[lmax_bin+1].real))
+			if ((lmax > Fw[lmax_bin-1].real()) && (lmax > Fw[lmax_bin+1].real()))
 			{
 				cmax_bin = lmax_bin;
 			}
