@@ -38,7 +38,6 @@
 
 #include "defines.h"
 #include "quantise.h"
-#include "mbest.h"
 #include "newamp1.h"
 #include "newamp2.h"
 
@@ -126,7 +125,7 @@ void CNewamp2::n2_rate_K_mbest_encode(int *indexes, float *x, float *xq, int ndi
 {
 	int i, n1;
 	const float *codebook1 = newamp2vq_cb[0].cb;
-	struct MBEST *mbest_stage1;
+	MBEST *mbest_stage1;
 	float w[ndim];
 	int   index[1];
 
@@ -555,4 +554,33 @@ void CNewamp2::newamp2_indexes_to_model(C2CONST *c2const, MODEL model_[], std::c
 	*Wo_left = Wo_right;
 	*voicing_left = voicing_right;
 
+}
+
+/*---------------------------------------------------------------------------*\
+
+  mbest_search450
+
+  Searches vec[] to a codebbook of vectors, and maintains a list of the mbest
+  closest matches. Only searches the first NewAmp2_K Vectors
+
+  \*---------------------------------------------------------------------------*/
+
+void CNewamp2::mbest_search450(const float *cb, float vec[], float w[], int k,int shorterK, int m, MBEST *mbest, int index[])
+
+{
+	for(int j=0; j<m; j++)
+	{
+		float e = 0.0f;
+		for(int i=0; i<k; i++)
+		{
+			//Only search first NEWAMP2_K Vectors
+			if(i < shorterK)
+			{
+				float diff = cb[j*k+i]-vec[i];
+				e += diff*w[i] * diff*w[i];
+			}
+		}
+		index[0] = j;
+		mbest_insert(mbest, index, e);
+	}
 }

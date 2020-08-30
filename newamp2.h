@@ -56,6 +56,7 @@ private:
 	void newamp2_interpolate(float interpolated_surface_[], float left_vec[], float right_vec[], int K,int plosive_flag);
 	void newamp2_indexes_to_rate_K_vec(float rate_K_vec_[], float rate_K_vec_no_mean_[], float rate_K_sample_freqs_kHz[], int K, float *mean_, int indexes[], float pf_gain);
 	void newamp2_16k_indexes_to_rate_K_vec(float  rate_K_vec_[], float  rate_K_vec_no_mean_[], float rate_K_sample_freqs_kHz[], int K, float *mean_, int indexes[], float  pf_gain);
+	void mbest_search450(const float *cb, float vec[], float w[], int k,int shorterK, int m, MBEST *mbest, int index[]);
 };
 
 #endif

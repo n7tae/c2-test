@@ -36,7 +36,6 @@
 
 #include "defines.h"
 #include "quantise.h"
-#include "mbest.h"
 #include "newamp1.h"
 
 
@@ -88,7 +87,7 @@ float CNewamp1::rate_K_mbest_encode(int *indexes, float *x, float *xq, int ndim,
 	int i, j, n1, n2;
 	const float *codebook1 = newamp1vq_cb[0].cb;
 	const float *codebook2 = newamp1vq_cb[1].cb;
-	struct MBEST *mbest_stage1, *mbest_stage2;
+	MBEST *mbest_stage1, *mbest_stage2;
 	float target[ndim];
 	float w[ndim];
 	int   index[MBEST_STAGES];
@@ -401,4 +400,36 @@ void CNewamp1::newamp1_indexes_to_model(C2CONST *c2const, MODEL model_[], std::c
 	*Wo_left = Wo_right;
 	*voicing_left = voicing_right;
 
+}
+
+/*---------------------------------------------------------------------------*\
+
+  mbest_search
+
+  Searches vec[] to a codebbook of vectors, and maintains a list of the mbest
+  closest matches.
+
+\*---------------------------------------------------------------------------*/
+
+void CNewamp1::mbest_search(
+	const float  *cb,     /* VQ codebook to search         */
+	float         vec[],  /* target vector                 */
+	float         w[],    /* weighting vector              */
+	int           k,      /* dimension of vector           */
+	int           m,      /* number on entries in codebook */
+	MBEST        *mbest,  /* list of closest matches       */
+	int           index[] /* indexes that lead us here     */
+)
+{
+	for(int j=0; j<m; j++)
+	{
+		float e = 0.0f;
+		for(int i=0; i<k; i++)
+		{
+			float diff = cb[j*k+i]-vec[i];
+			e += diff*w[i]*diff*w[i];
+		}
+		index[0] = j;
+		mbest_insert(mbest, index, e);
+	}
 }

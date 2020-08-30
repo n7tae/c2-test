@@ -54,6 +54,8 @@ private:
 	void newamp1_indexes_to_rate_K_vec(float rate_K_vec_[], float rate_K_vec_no_mean_[], float rate_K_sample_freqs_kHz[], int K, float *mean_, int indexes[], float user_rate_K_vec_no_mean_[], int post_filter_en);
 	void newamp1_interpolate(float interpolated_surface_[], float left_vec[], float right_vec[], int K);
 	void newamp1_eq(float rate_K_vec_no_mean[], float eq[], int K, int eq_en);
+
+	void mbest_search(const float *cb, float vec[], float w[], int k, int m, MBEST *mbest, int index[]);
 };
 
 #endif

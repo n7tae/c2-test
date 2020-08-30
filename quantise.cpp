@@ -37,7 +37,6 @@
 #include "lpc.h"
 #include "lsp.h"
 #include "kiss_fftr.h"
-#include "mbest.h"
 
 #define LSP_DELTA1 0.01         /* grid spacing for LSP root searches */
 
