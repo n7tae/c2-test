@@ -8,6 +8,8 @@
 #include <math.h>
 #include <string.h>
 
+#include "defines.h"
+
 /* for real ffts, we need an even size */
 #define kiss_fftr_next_fast_size_real(n) (kiss_fft_next_fast_size( ((n)+1) >> 1) << 1 )
 

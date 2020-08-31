@@ -31,6 +31,7 @@
 
 #include <complex>
 
+#include "codec2_internal.h"
 #include "defines.h"
 #include "kiss_fft.h"
 #include "version.h"
@@ -89,32 +90,30 @@
 
 #define CODEC2_MODE_ACTIVE(mode_name, var)  ((mode_name##_EN) == 0 ? 0: (var) == mode_name)
 
-struct CODEC2;
+CODEC2 *codec2_create(int mode);
+void codec2_destroy(CODEC2 *codec2_state);
+void codec2_encode(CODEC2 *codec2_state, unsigned char * bits, short speech_in[]);
+void codec2_decode(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits);
+void codec2_decode_ber(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits, float ber_est);
+int  codec2_samples_per_frame(CODEC2 *codec2_state);
+int  codec2_bits_per_frame(CODEC2 *codec2_state);
 
-struct CODEC2 *codec2_create(int mode);
-void codec2_destroy(struct CODEC2 *codec2_state);
-void codec2_encode(struct CODEC2 *codec2_state, unsigned char * bits, short speech_in[]);
-void codec2_decode(struct CODEC2 *codec2_state, short speech_out[], const unsigned char *bits);
-void codec2_decode_ber(struct CODEC2 *codec2_state, short speech_out[], const unsigned char *bits, float ber_est);
-int  codec2_samples_per_frame(struct CODEC2 *codec2_state);
-int  codec2_bits_per_frame(struct CODEC2 *codec2_state);
-
-void codec2_set_lpc_post_filter(struct CODEC2 *codec2_state, int enable, int bass_boost, float beta, float gamma);
-int  codec2_get_spare_bit_index(struct CODEC2 *codec2_state);
-int  codec2_rebuild_spare_bit(struct CODEC2 *codec2_state, char unpacked_bits[]);
-void codec2_set_natural_or_gray(struct CODEC2 *codec2_state, int gray);
-void codec2_set_softdec(struct CODEC2 *c2, float *softdec);
-float codec2_get_energy(struct CODEC2 *codec2_state, const unsigned char *bits);
+void codec2_set_lpc_post_filter(CODEC2 *codec2_state, int enable, int bass_boost, float beta, float gamma);
+int  codec2_get_spare_bit_index(CODEC2 *codec2_state);
+int  codec2_rebuild_spare_bit(CODEC2 *codec2_state, char unpacked_bits[]);
+void codec2_set_natural_or_gray(CODEC2 *codec2_state, int gray);
+void codec2_set_softdec(CODEC2 *c2, float *softdec);
+float codec2_get_energy(CODEC2 *codec2_state, const unsigned char *bits);
 
 // support for ML and VQ experiments
-void codec2_open_mlfeat(struct CODEC2 *codec2_state, char *feat_filename, char *model_filename);
-void codec2_load_codebook(struct CODEC2 *codec2_state, int num, char *filename);
-float codec2_get_var(struct CODEC2 *codec2_state);
-float *codec2_enable_user_ratek(struct CODEC2 *codec2_state, int *K);
+void codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_filename, char *model_filename);
+void codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename);
+float codec2_get_var(CODEC2 *codec2_state);
+float *codec2_enable_user_ratek(CODEC2 *codec2_state, int *K);
 
 // 700C post filter and equaliser
-void codec2_700c_post_filter(struct CODEC2 *codec2_state, int en);
-void codec2_700c_eq(struct CODEC2 *codec2_state, int en);
+void codec2_700c_post_filter(CODEC2 *codec2_state, int en);
+void codec2_700c_eq(CODEC2 *codec2_state, int en);
 
 // merged from other files
 void sample_phase(MODEL *model, std::complex<float> filter_phase[], std::complex<float> A[]);

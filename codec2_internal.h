@@ -33,7 +33,7 @@
 #include "newamp1.h"
 #include "newamp2.h"
 
-struct CODEC2 {
+using CODEC2 = struct codec2_tag {
     int           mode;
     C2CONST       c2const;
     int           Fs;
@@ -95,13 +95,9 @@ struct CODEC2 {
     FILE *fmlfeat, *fmlmodel;
 
     /* encode/decode function pointers for the selected mode */
-    void (*encode)(struct CODEC2 *c2, unsigned char * bits, short speech[]);
-    void (*decode)(struct CODEC2 *c2, short speech[], const unsigned char * bits);
-    void (*decode_ber)(struct CODEC2 *c2, short speech[], const unsigned char * bits, float ber_est);
+    void (*encode)(struct codec2_tag *c2, unsigned char * bits, short speech[]);
+    void (*decode)(struct codec2_tag *c2, short speech[], const unsigned char * bits);
+    void (*decode_ber)(struct codec2_tag *c2, short speech[], const unsigned char * bits, float ber_est);
 };
-
-// test and debug
-void analyse_one_frame(struct CODEC2 *c2, MODEL *model, short speech[]);
-void synthesise_one_frame(struct CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain);
 
 #endif
