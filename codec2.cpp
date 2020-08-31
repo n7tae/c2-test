@@ -45,10 +45,6 @@
 #define HPF_BETA 0.125
 #define BPF_N 101
 
-static Cnlp nlp;
-static CQuantize qt;
-static CNewamp1 na1;
-static CNewamp2 na2;
 CKissFFT kiss;
 
 /*---------------------------------------------------------------------------* \
@@ -57,26 +53,6 @@ CKissFFT kiss;
 
 \*---------------------------------------------------------------------------*/
 
-void analyse_one_frame(CODEC2 *c2, MODEL *model, short speech[]);
-void synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain);
-void codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char * bits);
-void codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char * bits);
-void codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char * bits);
-void codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char * bits);
-void codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char * bits, float ber_est);
-void codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char * bits);
-void codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char * bits);
-void codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]);
-void codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char * bits);
-void codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned char * bits);
-static void ear_protection(float in_out[], int n);
 
 
 
@@ -102,10 +78,10 @@ static void ear_protection(float in_out[], int n);
 
 
 //Don't create CODEC2_MODE_450PWB for Encoding as it has undefined behavior !
-CODEC2 * codec2_create(int mode)
+CODEC2 *CCodec2::codec2_create(int mode)
 {
-	CODEC2 *c2;
-	int            i,l;
+	static CODEC2 codec2;
+	int i,l;
 
 	// ALL POSSIBLE MODES MUST BE CHECKED HERE!
 	// we test if the desired mode is enabled at compile time
@@ -125,219 +101,216 @@ CODEC2 * codec2_create(int mode)
 		return NULL;
 	}
 
-	c2 = (CODEC2*)malloc(sizeof(CODEC2));
-	if (c2 == NULL)
-		return NULL;
 
-	c2->mode = mode;
+	codec2.mode = mode;
 
 	/* store constants in a few places for convenience */
 
 	if (CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, mode) == 0)
 	{
-		c2->c2const = c2const_create(8000, N_S);
+		codec2.c2const = c2const_create(8000, N_S);
 	}
 	else
 	{
-		c2->c2const = c2const_create(16000, N_S);
+		codec2.c2const = c2const_create(16000, N_S);
 	}
-	c2->Fs = c2->c2const.Fs;
-	int n_samp = c2->n_samp = c2->c2const.n_samp;
-	int m_pitch = c2->m_pitch = c2->c2const.m_pitch;
+	codec2.Fs = codec2.c2const.Fs;
+	int n_samp = codec2.n_samp = codec2.c2const.n_samp;
+	int m_pitch = codec2.m_pitch = codec2.c2const.m_pitch;
 
-	c2->Pn = (float*)malloc(2*n_samp*sizeof(float));
-	if (c2->Pn == NULL)
+	codec2.Pn = (float*)malloc(2*n_samp*sizeof(float));
+	if (codec2.Pn == NULL)
 	{
 		return NULL;
 	}
-	c2->Sn_ = (float*)malloc(2*n_samp*sizeof(float));
-	if (c2->Sn_ == NULL)
+	codec2.Sn_ = (float*)malloc(2*n_samp*sizeof(float));
+	if (codec2.Sn_ == NULL)
 	{
-		free(c2->Pn);
+		free(codec2.Pn);
 		return NULL;
 	}
-	c2->w = (float*)malloc(m_pitch*sizeof(float));
-	if (c2->w == NULL)
+	codec2.w = (float*)malloc(m_pitch*sizeof(float));
+	if (codec2.w == NULL)
 	{
-		free(c2->Pn);
-		free(c2->Sn_);
+		free(codec2.Pn);
+		free(codec2.Sn_);
 		return NULL;
 	}
-	c2->Sn = (float*)malloc(m_pitch*sizeof(float));
-	if (c2->Sn == NULL)
+	codec2.Sn = (float*)malloc(m_pitch*sizeof(float));
+	if (codec2.Sn == NULL)
 	{
-		free(c2->Pn);
-		free(c2->Sn_);
-		free(c2->w);
+		free(codec2.Pn);
+		free(codec2.Sn_);
+		free(codec2.w);
 		return NULL;
 	}
 
 	for(i=0; i<m_pitch; i++)
-		c2->Sn[i] = 1.0;
-	c2->hpf_states[0] = c2->hpf_states[1] = 0.0;
+		codec2.Sn[i] = 1.0;
+	codec2.hpf_states[0] = codec2.hpf_states[1] = 0.0;
 	for(i=0; i<2*n_samp; i++)
-		c2->Sn_[i] = 0;
-	c2->fft_fwd_cfg = kiss.fft_alloc(FFT_ENC, 0, NULL, NULL);
-	c2->fftr_fwd_cfg = kiss.fftr_alloc(FFT_ENC, 0, NULL, NULL);
-	make_analysis_window(&c2->c2const, c2->fft_fwd_cfg, c2->w,c2->W);
-	make_synthesis_window(&c2->c2const, c2->Pn);
-	c2->fftr_inv_cfg = kiss.fftr_alloc(FFT_DEC, 1, NULL, NULL);
-	c2->prev_f0_enc = 1/P_MAX_S;
-	c2->bg_est = 0.0;
-	c2->ex_phase = 0.0;
+		codec2.Sn_[i] = 0;
+	codec2.fft_fwd_cfg = kiss.fft_alloc(FFT_ENC, 0, NULL, NULL);
+	codec2.fftr_fwd_cfg = kiss.fftr_alloc(FFT_ENC, 0, NULL, NULL);
+	make_analysis_window(&codec2.c2const, codec2.fft_fwd_cfg, codec2.w,codec2.W);
+	make_synthesis_window(&codec2.c2const, codec2.Pn);
+	codec2.fftr_inv_cfg = kiss.fftr_alloc(FFT_DEC, 1, NULL, NULL);
+	codec2.prev_f0_enc = 1/P_MAX_S;
+	codec2.bg_est = 0.0;
+	codec2.ex_phase = 0.0;
 
 	for(l=1; l<=MAX_AMP; l++)
-		c2->prev_model_dec.A[l] = 0.0;
-	c2->prev_model_dec.Wo = TWO_PI/c2->c2const.p_max;
-	c2->prev_model_dec.L = PI/c2->prev_model_dec.Wo;
-	c2->prev_model_dec.voiced = 0;
+		codec2.prev_model_dec.A[l] = 0.0;
+	codec2.prev_model_dec.Wo = TWO_PI/codec2.c2const.p_max;
+	codec2.prev_model_dec.L = PI/codec2.prev_model_dec.Wo;
+	codec2.prev_model_dec.voiced = 0;
 
 	for(i=0; i<LPC_ORD; i++)
 	{
-		c2->prev_lsps_dec[i] = i*PI/(LPC_ORD+1);
+		codec2.prev_lsps_dec[i] = i*PI/(LPC_ORD+1);
 	}
-	c2->prev_e_dec = 1;
+	codec2.prev_e_dec = 1;
 
-	nlp.nlp_create(&c2->c2const);
+	nlp.nlp_create(&codec2.c2const);
 
-	c2->lpc_pf = 1;
-	c2->bass_boost = 1;
-	c2->beta = LPCPF_BETA;
-	c2->gamma = LPCPF_GAMMA;
+	codec2.lpc_pf = 1;
+	codec2.bass_boost = 1;
+	codec2.beta = LPCPF_BETA;
+	codec2.gamma = LPCPF_GAMMA;
 
-	c2->xq_enc[0] = c2->xq_enc[1] = 0.0;
-	c2->xq_dec[0] = c2->xq_dec[1] = 0.0;
+	codec2.xq_enc[0] = codec2.xq_enc[1] = 0.0;
+	codec2.xq_dec[0] = codec2.xq_dec[1] = 0.0;
 
-	c2->smoothing = 0;
-	c2->se = 0.0;
-	c2->nse = 0;
-	c2->user_rate_K_vec_no_mean_ = NULL;
-	c2->post_filter_en = 1;
+	codec2.smoothing = 0;
+	codec2.se = 0.0;
+	codec2.nse = 0;
+	codec2.user_rate_K_vec_no_mean_ = NULL;
+	codec2.post_filter_en = 1;
 
-	c2->bpf_buf = (float*)malloc(sizeof(float)*(BPF_N+4*c2->n_samp));
-	assert(c2->bpf_buf != NULL);
-	for(i=0; i<BPF_N+4*c2->n_samp; i++)
-		c2->bpf_buf[i] = 0.0;
+	codec2.bpf_buf = (float*)malloc(sizeof(float)*(BPF_N+4*codec2.n_samp));
+	assert(codec2.bpf_buf != NULL);
+	for(i=0; i<BPF_N+4*codec2.n_samp; i++)
+		codec2.bpf_buf[i] = 0.0;
 
-	c2->softdec = NULL;
-	c2->gray = 1;
+	codec2.softdec = NULL;
+	codec2.gray = 1;
 
 	/* newamp1 initialisation */
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, codec2.mode))
 	{
-		na1.mel_sample_freqs_kHz(c2->rate_K_sample_freqs_kHz, NEWAMP1_K, na1.ftomel(200.0), na1.ftomel(3700.0) );
+		na1.mel_sample_freqs_kHz(codec2.rate_K_sample_freqs_kHz, NEWAMP1_K, na1.ftomel(200.0), na1.ftomel(3700.0) );
 		int k;
 		for(k=0; k<NEWAMP1_K; k++)
 		{
-			c2->prev_rate_K_vec_[k] = 0.0;
-			c2->eq[k] = 0.0;
+			codec2.prev_rate_K_vec_[k] = 0.0;
+			codec2.eq[k] = 0.0;
 		}
-		c2->eq_en = 0;
-		c2->Wo_left = 0.0;
-		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 1, NULL, NULL);
+		codec2.eq_en = 0;
+		codec2.Wo_left = 0.0;
+		codec2.voicing_left = 0;;
+		codec2.phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 0, NULL, NULL);
+		codec2.phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 1, NULL, NULL);
 	}
 
 	/* newamp2 initialisation */
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, codec2.mode))
 	{
-		na2.n2_mel_sample_freqs_kHz(c2->n2_rate_K_sample_freqs_kHz, NEWAMP2_K);
+		na2.n2_mel_sample_freqs_kHz(codec2.n2_rate_K_sample_freqs_kHz, NEWAMP2_K);
 		int k;
 		for(k=0; k<NEWAMP2_K; k++)
 		{
-			c2->n2_prev_rate_K_vec_[k] = 0.0;
+			codec2.n2_prev_rate_K_vec_[k] = 0.0;
 		}
-		c2->Wo_left = 0.0;
-		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		codec2.Wo_left = 0.0;
+		codec2.voicing_left = 0;;
+		codec2.phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
+		codec2.phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
 	}
 	/* newamp2 PWB initialisation */
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, codec2.mode))
 	{
-		na2.n2_mel_sample_freqs_kHz(c2->n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K);
+		na2.n2_mel_sample_freqs_kHz(codec2.n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K);
 		int k;
 		for(k=0; k<NEWAMP2_16K_K; k++)
 		{
-			c2->n2_pwb_prev_rate_K_vec_[k] = 0.0;
+			codec2.n2_pwb_prev_rate_K_vec_[k] = 0.0;
 		}
-		c2->Wo_left = 0.0;
-		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		codec2.Wo_left = 0.0;
+		codec2.voicing_left = 0;;
+		codec2.phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
+		codec2.phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
 	}
 
-	c2->fmlfeat = NULL;
-	c2->fmlmodel = NULL;
+	codec2.fmlfeat = NULL;
+	codec2.fmlmodel = NULL;
 
 	// make sure that one of the two decode function pointers is empty
 	// for the encode function pointer this is not required since we always set it
 	// to a meaningful value
 
-	c2->decode = NULL;
-	c2->decode_ber = NULL;
+	decode = NULL;
+	decode_ber = NULL;
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, codec2.mode))
 	{
-		c2->encode = codec2_encode_3200;
-		c2->decode = codec2_decode_3200;
+		encode = &CCodec2::codec2_encode_3200;
+		decode = &CCodec2::codec2_decode_3200;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, codec2.mode))
 	{
-		c2->encode = codec2_encode_2400;
-		c2->decode = codec2_decode_2400;
+		encode = &CCodec2::codec2_encode_2400;
+		decode = &CCodec2::codec2_decode_2400;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, codec2.mode))
 	{
-		c2->encode = codec2_encode_1600;
-		c2->decode = codec2_decode_1600;
+		encode = &CCodec2::codec2_encode_1600;
+		decode = &CCodec2::codec2_decode_1600;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, codec2.mode))
 	{
-		c2->encode = codec2_encode_1400;
-		c2->decode = codec2_decode_1400;
+		encode = &CCodec2::codec2_encode_1400;
+		decode = &CCodec2::codec2_decode_1400;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, codec2.mode))
 	{
-		c2->encode = codec2_encode_1300;
-		c2->decode_ber = codec2_decode_1300;
+		encode = &CCodec2::codec2_encode_1300;
+		decode_ber = &CCodec2::codec2_decode_1300;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, codec2.mode))
 	{
-		c2->encode = codec2_encode_1200;
-		c2->decode = codec2_decode_1200;
+		encode = &CCodec2::codec2_encode_1200;
+		decode = &CCodec2::codec2_decode_1200;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, codec2.mode))
 	{
-		c2->encode = codec2_encode_700c;
-		c2->decode = codec2_decode_700c;
+		encode = &CCodec2::codec2_encode_700c;
+		decode = &CCodec2::codec2_decode_700c;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, codec2.mode))
 	{
-		c2->encode = codec2_encode_450;
-		c2->decode = codec2_decode_450;
+		encode = &CCodec2::codec2_encode_450;
+		decode = &CCodec2::codec2_decode_450;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, codec2.mode))
 	{
 		//Encode PWB doesnt make sense
-		c2->encode = codec2_encode_450;
-		c2->decode = codec2_decode_450pwb;
+		encode = &CCodec2::codec2_encode_450;
+		decode = &CCodec2::codec2_decode_450pwb;
 	}
 
 
-	return c2;
+	return &codec2;
 }
 
 /*---------------------------------------------------------------------------*\
@@ -350,7 +323,7 @@ CODEC2 * codec2_create(int mode)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_destroy(CODEC2 *c2)
+void CCodec2::codec2_destroy(CODEC2 *c2)
 {
 	assert(c2 != NULL);
 	free(c2->bpf_buf);
@@ -390,7 +363,7 @@ void codec2_destroy(CODEC2 *c2)
 
 \*---------------------------------------------------------------------------*/
 
-int codec2_bits_per_frame(CODEC2 *c2)
+int CCodec2::codec2_bits_per_frame(CODEC2 *c2)
 {
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2->mode))
 		return 64;
@@ -425,7 +398,7 @@ int codec2_bits_per_frame(CODEC2 *c2)
 
 \*---------------------------------------------------------------------------*/
 
-int codec2_samples_per_frame(CODEC2 *c2)
+int CCodec2::codec2_samples_per_frame(CODEC2 *c2)
 {
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2->mode))
 		return 160;
@@ -448,32 +421,31 @@ int codec2_samples_per_frame(CODEC2 *c2)
 	return 0; /* shouldnt get here */
 }
 
-void codec2_encode(CODEC2 *c2, unsigned char *bits, short speech[])
+void CCodec2::codec2_encode(CODEC2 *c2, unsigned char *bits, short speech[])
 {
 	assert(c2 != NULL);
-	assert(c2->encode != NULL);
+	assert(encode != NULL);
 
-	c2->encode(c2, bits, speech);
-
+	(*this.*encode)(c2, bits, speech);
 }
 
-void codec2_decode(CODEC2 *c2, short speech[], const unsigned char *bits)
+void CCodec2::codec2_decode(CODEC2 *c2, short speech[], const unsigned char *bits)
 {
 	codec2_decode_ber(c2, speech, bits, 0.0);
 }
 
-void codec2_decode_ber(CODEC2 *c2, short speech[], const unsigned char *bits, float ber_est)
+void CCodec2::codec2_decode_ber(CODEC2 *c2, short speech[], const unsigned char *bits, float ber_est)
 {
 	assert(c2 != NULL);
-	assert(c2->decode != NULL || c2->decode_ber != NULL);
+	assert(decode != NULL || decode_ber != NULL);
 
-	if (c2->decode != NULL)
+	if (decode != NULL)
 	{
-		c2->decode(c2, speech, bits);
+		(*this.*decode)(c2, speech, bits);
 	}
 	else
 	{
-		c2->decode_ber(c2, speech, bits, ber_est);
+		(*this.*decode_ber)(c2, speech, bits, ber_est);
 	}
 }
 
@@ -504,7 +476,7 @@ void codec2_decode_ber(CODEC2 *c2, short speech[], const unsigned char *bits, fl
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   ak[LPC_ORD+1];
@@ -554,7 +526,7 @@ void codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[2];
 	int     lspd_indexes[LPC_ORD];
@@ -651,7 +623,7 @@ void codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   ak[LPC_ORD+1];
@@ -702,7 +674,7 @@ void codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[2];
 	int     lsp_indexes[LPC_ORD];
@@ -812,7 +784,7 @@ void codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -882,7 +854,7 @@ void codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -998,7 +970,7 @@ void codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -1063,7 +1035,7 @@ void codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -1172,7 +1144,7 @@ void codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -1234,7 +1206,7 @@ void codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 static int frames;
-void codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char * bits, float ber_est)
+void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char * bits, float ber_est)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -1375,7 +1347,7 @@ void codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char * bits, 
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -1443,7 +1415,7 @@ void codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -1556,7 +1528,7 @@ void codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL        model;
 	int          indexes[4], i, M=4;
@@ -1616,7 +1588,7 @@ void codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     indexes[4];
@@ -1669,7 +1641,7 @@ void codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-float codec2_energy_700c(CODEC2 *c2, const unsigned char * bits)
+float CCodec2::codec2_energy_700c(CODEC2 *c2, const unsigned char * bits)
 {
 	int     indexes[4];
 	unsigned int nbit = 0;
@@ -1691,7 +1663,7 @@ float codec2_energy_700c(CODEC2 *c2, const unsigned char * bits)
 	return exp10f(mean/10.0);
 }
 
-float codec2_energy_450(CODEC2 *c2, const unsigned char * bits)
+float CCodec2::codec2_energy_450(CODEC2 *c2, const unsigned char * bits)
 {
 	int     indexes[4];
 	unsigned int nbit = 0;
@@ -1723,7 +1695,7 @@ float codec2_energy_450(CODEC2 *c2, const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-float codec2_get_energy(CODEC2 *c2, const unsigned char *bits)
+float CCodec2::codec2_get_energy(CODEC2 *c2, const unsigned char *bits)
 {
 	assert(c2 != NULL);
 	assert(
@@ -1829,7 +1801,7 @@ float codec2_get_energy(CODEC2 *c2, const unsigned char *bits)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[])
 {
 	MODEL        model;
 	int          indexes[4], i,h, M=4;
@@ -1917,7 +1889,7 @@ void codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     indexes[4];
@@ -1958,7 +1930,7 @@ void codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-void codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     indexes[4];
@@ -1999,7 +1971,7 @@ void codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned char * bits
 
 \*---------------------------------------------------------------------------*/
 
-void synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain)
+void CCodec2::synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain)
 {
 	int     i;
 
@@ -2051,7 +2023,7 @@ void synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std::complex
 
 \*---------------------------------------------------------------------------*/
 
-void analyse_one_frame(CODEC2 *c2, MODEL *model, short speech[])
+void CCodec2::analyse_one_frame(CODEC2 *c2, MODEL *model, short speech[])
 {
 	std::complex<float>    Sw[FFT_ENC];
 	float   pitch;
@@ -2100,7 +2072,7 @@ void analyse_one_frame(CODEC2 *c2, MODEL *model, short speech[])
 
 \*---------------------------------------------------------------------------*/
 
-static void ear_protection(float in_out[], int n)
+void CCodec2::ear_protection(float in_out[], int n)
 {
 	float max_sample, over, gain;
 	int   i;
@@ -2129,7 +2101,7 @@ static void ear_protection(float in_out[], int n)
 }
 
 
-void codec2_set_lpc_post_filter(CODEC2 *c2, int enable, int bass_boost, float beta, float gamma)
+void CCodec2::codec2_set_lpc_post_filter(CODEC2 *c2, int enable, int bass_boost, float beta, float gamma)
 {
 	assert((beta >= 0.0) && (beta <= 1.0));
 	assert((gamma >= 0.0) && (gamma <= 1.0));
@@ -2146,7 +2118,7 @@ void codec2_set_lpc_post_filter(CODEC2 *c2, int enable, int bass_boost, float be
    Experimental method of sending voice/data frames for freeDV.
 */
 
-int codec2_get_spare_bit_index(CODEC2 *c2)
+int CCodec2::codec2_get_spare_bit_index(CODEC2 *c2)
 {
 	assert(c2 != NULL);
 
@@ -2171,7 +2143,7 @@ int codec2_get_spare_bit_index(CODEC2 *c2)
    for convenience.
 */
 
-int codec2_rebuild_spare_bit(CODEC2 *c2, char unpacked_bits[])
+int CCodec2::codec2_rebuild_spare_bit(CODEC2 *c2, char unpacked_bits[])
 {
 	int v1,v3;
 
@@ -2220,19 +2192,19 @@ int codec2_rebuild_spare_bit(CODEC2 *c2, char unpacked_bits[])
 	return -1;
 }
 
-void codec2_set_natural_or_gray(CODEC2 *c2, int gray)
+void CCodec2::codec2_set_natural_or_gray(CODEC2 *c2, int gray)
 {
 	assert(c2 != NULL);
 	c2->gray = gray;
 }
 
-void codec2_set_softdec(CODEC2 *c2, float *softdec)
+void CCodec2::codec2_set_softdec(CODEC2 *c2, float *softdec)
 {
 	assert(c2 != NULL);
 	c2->softdec = softdec;
 }
 
-void codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_fn, char *model_fn)
+void CCodec2::codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_fn, char *model_fn)
 {
 	if ((codec2_state->fmlfeat = fopen(feat_fn, "wb")) == NULL)
 	{
@@ -2249,8 +2221,7 @@ void codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_fn, char *model_fn)
 	}
 }
 
-#ifndef __EMBEDDED__
-void codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename)
+void CCodec2::codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename)
 {
 	FILE *f;
 
@@ -2269,9 +2240,8 @@ void codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename)
 	assert(nread == newamp1vq_cb[num].k*newamp1vq_cb[num].m);
 	fclose(f);
 }
-#endif
 
-float codec2_get_var(CODEC2 *codec2_state)
+float CCodec2::codec2_get_var(CODEC2 *codec2_state)
 {
 	if (codec2_state->nse)
 		return codec2_state->se/codec2_state->nse;
@@ -2279,19 +2249,19 @@ float codec2_get_var(CODEC2 *codec2_state)
 		return 0;
 }
 
-float *codec2_enable_user_ratek(CODEC2 *codec2_state, int *K)
+float *CCodec2::codec2_enable_user_ratek(CODEC2 *codec2_state, int *K)
 {
 	codec2_state->user_rate_K_vec_no_mean_ = (float*)malloc(sizeof(float)*NEWAMP1_K);
 	*K = NEWAMP1_K;
 	return codec2_state->user_rate_K_vec_no_mean_;
 }
 
-void codec2_700c_post_filter(CODEC2 *codec2_state, int en)
+void CCodec2::codec2_700c_post_filter(CODEC2 *codec2_state, int en)
 {
 	codec2_state->post_filter_en = en;
 }
 
-void codec2_700c_eq(CODEC2 *codec2_state, int en)
+void CCodec2::codec2_700c_eq(CODEC2 *codec2_state, int en)
 {
 	codec2_state->eq_en = en;
 	codec2_state->se = 0.0;
@@ -2306,7 +2276,7 @@ void codec2_700c_eq(CODEC2 *codec2_state, int en)
 
 \*---------------------------------------------------------------------------*/
 
-void sample_phase(MODEL *model,
+void CCodec2::sample_phase(MODEL *model,
 				  std::complex<float> H[],
 				  std::complex<float> A[]        /* LPC analysis filter in freq domain */
 )
@@ -2417,7 +2387,7 @@ void sample_phase(MODEL *model,
 
 \*---------------------------------------------------------------------------*/
 
-void phase_synth_zero_order(
+void CCodec2::phase_synth_zero_order(
 	int    n_samp,
 	MODEL *model,
 	float *ex_phase,            /* excitation phase of fundamental        */
@@ -2528,7 +2498,7 @@ void phase_synth_zero_order(
 			            // spikey (impulsive) for mmt1, but speech was
                         // perhaps a little rougher.
 
-void postfilter(
+void CCodec2::postfilter(
 	MODEL *model,
 	float *bg_est
 )
@@ -2571,7 +2541,7 @@ void postfilter(
 #endif
 
 }
-C2CONST c2const_create(int Fs, float framelength_s)
+C2CONST CCodec2::c2const_create(int Fs, float framelength_s)
 {
 	C2CONST c2const;
 
@@ -2616,7 +2586,7 @@ C2CONST c2const_create(int Fs, float framelength_s)
 
 \*---------------------------------------------------------------------------*/
 
-void make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w[], float W[])
+void CCodec2::make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w[], float W[])
 {
 	float m;
 	std::complex<float>  wshift[FFT_ENC];
@@ -2731,7 +2701,7 @@ void make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w
 
 \*---------------------------------------------------------------------------*/
 
-void dft_speech(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[])
+void CCodec2::dft_speech(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[])
 {
     int  i;
     int  m_pitch = c2const->m_pitch;
@@ -2768,7 +2738,7 @@ void dft_speech(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, std::complex<floa
 
 \*---------------------------------------------------------------------------*/
 
-void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<float> Sw[])
+void CCodec2::two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<float> Sw[])
 {
 	float pmin,pmax,pstep;	/* pitch refinment minimum, maximum and step */
 
@@ -2820,7 +2790,7 @@ void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<flo
 
 \*---------------------------------------------------------------------------*/
 
-void hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float pmin, float pmax, float pstep)
+void CCodec2::hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float pmin, float pmax, float pstep)
 {
 	int m;		/* loop variable */
 	int b;		/* bin for current harmonic centre */
@@ -2874,7 +2844,7 @@ void hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float pmin, flo
 
 \*---------------------------------------------------------------------------*/
 
-void estimate_amplitudes(MODEL *model, std::complex<float> Sw[], float W[], int est_phase)
+void CCodec2::estimate_amplitudes(MODEL *model, std::complex<float> Sw[], float W[], int est_phase)
 {
 	int   i,m;		/* loop variables */
 	int   am,bm;		/* bounds of current harmonic */
@@ -2921,12 +2891,7 @@ void estimate_amplitudes(MODEL *model, std::complex<float> Sw[], float W[], int 
 
 \*---------------------------------------------------------------------------*/
 
-float est_voicing_mbe(
-	C2CONST *c2const,
-	MODEL *model,
-	std::complex<float>   Sw[],
-	float  W[]
-)
+float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<float> Sw[], float  W[])
 {
 	int   l,al,bl,m;    /* loop variables */
 	std::complex<float>  Am;             /* amplitude sample for this band */
@@ -3046,7 +3011,7 @@ float est_voicing_mbe(
 
 \*---------------------------------------------------------------------------*/
 
-void make_synthesis_window(C2CONST *c2const, float Pn[])
+void CCodec2::make_synthesis_window(C2CONST *c2const, float Pn[])
 {
 	int   i;
 	float win;
@@ -3082,7 +3047,7 @@ void make_synthesis_window(C2CONST *c2const, float Pn[])
 
 \*---------------------------------------------------------------------------*/
 
-void synthesise(
+void CCodec2::synthesise(
 	int    n_samp,
 	kiss_fftr_state *fftr_inv_cfg,
 	float  Sn_[],		/* time domain synthesised signal              */
@@ -3142,7 +3107,7 @@ void synthesise(
 			Sn_[i] += sw_[j]*Pn[i];
 }
 
-int codec2_rand(void)
+int CCodec2::codec2_rand(void)
 {
 	static unsigned long next = 1;
 	next = next * 1103515245 + 12345;
@@ -3161,7 +3126,7 @@ int codec2_rand(void)
 
 \*---------------------------------------------------------------------------*/
 
-void interp_Wo(
+void CCodec2::interp_Wo(
 	MODEL *interp,    /* interpolated model params                     */
 	MODEL *prev,      /* previous frames model params                  */
 	MODEL *next,      /* next frames model params                      */
@@ -3181,7 +3146,7 @@ void interp_Wo(
 
 \*---------------------------------------------------------------------------*/
 
-void interp_Wo2(
+void CCodec2::interp_Wo2(
 	MODEL *interp,    /* interpolated model params                     */
 	MODEL *prev,      /* previous frames model params                  */
 	MODEL *next,      /* next frames model params                      */
@@ -3225,7 +3190,7 @@ void interp_Wo2(
 
 \*---------------------------------------------------------------------------*/
 
-float interp_energy(float prev_e, float next_e)
+float CCodec2::interp_energy(float prev_e, float next_e)
 {
 	//return powf(10.0, (log10f(prev_e) + log10f(next_e))/2.0);
 	return sqrtf(prev_e * next_e); //looks better is math. identical and faster math
@@ -3242,7 +3207,7 @@ float interp_energy(float prev_e, float next_e)
 
 \*---------------------------------------------------------------------------*/
 
-float interp_energy2(float prev_e, float next_e, float weight)
+float CCodec2::interp_energy2(float prev_e, float next_e, float weight)
 {
 	return exp10f((1.0 - weight)*log10f(prev_e) + weight*log10f(next_e));
 
@@ -3258,7 +3223,7 @@ float interp_energy2(float prev_e, float next_e, float weight)
 
 \*---------------------------------------------------------------------------*/
 
-void interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order)
+void CCodec2::interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order)
 {
 	int i;
 

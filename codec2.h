@@ -35,6 +35,10 @@
 #include "defines.h"
 #include "kiss_fft.h"
 #include "version.h"
+#include "nlp.h"
+#include "quantise.h"
+#include "newamp1.h"
+#include "newamp2.h"
 
 #define CODEC2_MODE_3200 	0
 #define CODEC2_MODE_2400 	1
@@ -90,52 +94,84 @@
 
 #define CODEC2_MODE_ACTIVE(mode_name, var)  ((mode_name##_EN) == 0 ? 0: (var) == mode_name)
 
-CODEC2 *codec2_create(int mode);
-void codec2_destroy(CODEC2 *codec2_state);
-void codec2_encode(CODEC2 *codec2_state, unsigned char * bits, short speech_in[]);
-void codec2_decode(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits);
-void codec2_decode_ber(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits, float ber_est);
-int  codec2_samples_per_frame(CODEC2 *codec2_state);
-int  codec2_bits_per_frame(CODEC2 *codec2_state);
+class CCodec2
+{
+public:
+	CODEC2 *codec2_create(int mode);
+	void codec2_destroy(CODEC2 *codec2_state);
+	void codec2_encode(CODEC2 *codec2_state, unsigned char * bits, short speech_in[]);
+	void codec2_decode(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits);
+	int  codec2_samples_per_frame(CODEC2 *codec2_state);
+	int  codec2_bits_per_frame(CODEC2 *codec2_state);
+	void codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_filename, char *model_filename);
+	void codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename);
+	void codec2_set_natural_or_gray(CODEC2 *codec2_state, int gray);
+	void codec2_700c_eq(CODEC2 *codec2_state, int en);
+	float codec2_get_var(CODEC2 *codec2_state);
+	float *codec2_enable_user_ratek(CODEC2 *codec2_state, int *K);
+	void codec2_700c_post_filter(CODEC2 *codec2_state, int en);
+	void codec2_set_softdec(CODEC2 *c2, float *softdec);
+	float codec2_get_energy(CODEC2 *codec2_state, const unsigned char *bits);
+	void codec2_decode_ber(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits, float ber_est);
 
-void codec2_set_lpc_post_filter(CODEC2 *codec2_state, int enable, int bass_boost, float beta, float gamma);
-int  codec2_get_spare_bit_index(CODEC2 *codec2_state);
-int  codec2_rebuild_spare_bit(CODEC2 *codec2_state, char unpacked_bits[]);
-void codec2_set_natural_or_gray(CODEC2 *codec2_state, int gray);
-void codec2_set_softdec(CODEC2 *c2, float *softdec);
-float codec2_get_energy(CODEC2 *codec2_state, const unsigned char *bits);
+private:
+	void codec2_set_lpc_post_filter(CODEC2 *codec2_state, int enable, int bass_boost, float beta, float gamma);
+	int  codec2_get_spare_bit_index(CODEC2 *codec2_state);
+	int  codec2_rebuild_spare_bit(CODEC2 *codec2_state, char unpacked_bits[]);
 
-// support for ML and VQ experiments
-void codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_filename, char *model_filename);
-void codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename);
-float codec2_get_var(CODEC2 *codec2_state);
-float *codec2_enable_user_ratek(CODEC2 *codec2_state, int *K);
+	// merged from other files
+	void sample_phase(MODEL *model, std::complex<float> filter_phase[], std::complex<float> A[]);
+	void phase_synth_zero_order(int n_samp, MODEL *model, float *ex_phase, std::complex<float> filter_phase[]);
+	void postfilter(MODEL *model, float *bg_est);
 
-// 700C post filter and equaliser
-void codec2_700c_post_filter(CODEC2 *codec2_state, int en);
-void codec2_700c_eq(CODEC2 *codec2_state, int en);
+	C2CONST c2const_create(int Fs, float framelength_ms);
 
-// merged from other files
-void sample_phase(MODEL *model, std::complex<float> filter_phase[], std::complex<float> A[]);
-void phase_synth_zero_order(int n_samp, MODEL *model, float *ex_phase, std::complex<float> filter_phase[]);
-void postfilter(MODEL *model, float *bg_est);
+	void make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w[], float W[]);
+	void dft_speech(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[]);
+	void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<float> Sw[]);
+	void estimate_amplitudes(MODEL *model, std::complex<float> Sw[], float W[], int est_phase);
+	float est_voicing_mbe(C2CONST *c2const, MODEL *model, std::complex<float> Sw[], float W[]);
+	void make_synthesis_window(C2CONST *c2const, float Pn[]);
+	void synthesise(int n_samp, kiss_fftr_state *fftr_inv_cfg, float Sn_[], MODEL *model, float Pn[], int shift);
+	int codec2_rand(void);
+	void hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float pmin, float pmax, float pstep);
 
-C2CONST c2const_create(int Fs, float framelength_ms);
+	void interp_Wo(MODEL *interp, MODEL *prev, MODEL *next, float Wo_min);
+	void interp_Wo2(MODEL *interp, MODEL *prev, MODEL *next, float weight, float Wo_min);
+	float interp_energy(float prev, float next);
+	float interp_energy2(float prev, float next, float weight);
+	void interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order);
 
-void make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w[], float W[]);
-void dft_speech(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[]);
-void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<float> Sw[]);
-void estimate_amplitudes(MODEL *model, std::complex<float> Sw[], float W[], int est_phase);
-float est_voicing_mbe(C2CONST *c2const, MODEL *model, std::complex<float> Sw[], float W[]);
-void make_synthesis_window(C2CONST *c2const, float Pn[]);
-void synthesise(int n_samp, kiss_fftr_state *fftr_inv_cfg, float Sn_[], MODEL *model, float Pn[], int shift);
-int codec2_rand(void);
-void hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float pmin, float pmax, float pstep);
+	void analyse_one_frame(CODEC2 *c2, MODEL *model, short speech[]);
+	void synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain);
+	void codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char * bits, float ber_est);
+	void codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]);
+	void codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void ear_protection(float in_out[], int n);
+	float codec2_energy_700c(CODEC2 *c2, const unsigned char * bits);
+	float codec2_energy_450(CODEC2 *c2, const unsigned char * bits);
 
-void interp_Wo(MODEL *interp, MODEL *prev, MODEL *next, float Wo_min);
-void interp_Wo2(MODEL *interp, MODEL *prev, MODEL *next, float weight, float Wo_min);
-float interp_energy(float prev, float next);
-float interp_energy2(float prev, float next, float weight);
-void interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order);
+	void (CCodec2::*encode)(struct codec2_tag *c2, unsigned char * bits, short speech[]);
+	void (CCodec2::*decode)(struct codec2_tag *c2, short speech[], const unsigned char * bits);
+	void (CCodec2::*decode_ber)(struct codec2_tag *c2, short speech[], const unsigned char * bits, float ber_est);
+	Cnlp nlp;
+	CQuantize qt;
+	CNewamp1 na1;
+	CNewamp2 na2;
+};
 
 #endif

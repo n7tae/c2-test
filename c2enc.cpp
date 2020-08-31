@@ -47,6 +47,8 @@ int main(int argc, char *argv[])
 	int            report_var = 0;
 	int            eq = 0;
 
+	CCodec2 cc2;
+
 	if (argc < 4)
 	{
 		printf("usage: c2enc 3200|2400|1600|1400|1300|1200|700C|450|450PWB InputRawspeechFile OutputBitFile [--natural] [--softdec] [--bitperchar] [--mlfeat f32File modelFile] [--loadcb stageNum Filename] [--var] [--eq]\n");
@@ -95,9 +97,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	auto codec2 = codec2_create(mode);
-	auto nsam = codec2_samples_per_frame(codec2);
-	auto nbit = codec2_bits_per_frame(codec2);
+	auto codec2 = cc2.codec2_create(mode);
+	auto nsam = cc2.codec2_samples_per_frame(codec2);
+	auto nbit = cc2.codec2_bits_per_frame(codec2);
 	buf = (short*)malloc(nsam*sizeof(short));
 	auto nbyte = (nbit + 7) / 8;
 
@@ -125,12 +127,12 @@ int main(int argc, char *argv[])
 		if (strcmp(argv[i], "--mlfeat") == 0)
 		{
 			/* dump machine learning features (700C only) */
-			codec2_open_mlfeat(codec2, argv[i+1], argv[i+2]);
+			cc2.codec2_open_mlfeat(codec2, argv[i+1], argv[i+2]);
 		}
 		if (strcmp(argv[i], "--loadcb") == 0)
 		{
 			/* load VQ stage (700C only) */
-			codec2_load_codebook(codec2, atoi(argv[i+1])-1, argv[i+2]);
+			cc2.codec2_load_codebook(codec2, atoi(argv[i+1])-1, argv[i+2]);
 		}
 		if (strcmp(argv[i], "--var") == 0)
 		{
@@ -142,15 +144,15 @@ int main(int argc, char *argv[])
 		}
 
 	}
-	codec2_set_natural_or_gray(codec2, gray);
-	codec2_700c_eq(codec2, eq);
+	cc2.codec2_set_natural_or_gray(codec2, gray);
+	cc2.codec2_700c_eq(codec2, eq);
 
 	//fprintf(stderr,"gray: %d softdec: %d\n", gray, softdec);
 
 	while(fread(buf, sizeof(short), nsam, fin) == (size_t)nsam)
 	{
 
-		codec2_encode(codec2, bits, buf);
+		cc2.codec2_encode(codec2, bits, buf);
 
 		if (softdec || bitperchar)
 		{
@@ -190,10 +192,10 @@ int main(int argc, char *argv[])
 
 	if (report_var)
 	{
-		float var = codec2_get_var(codec2);
+		float var = cc2.codec2_get_var(codec2);
 		fprintf(stderr, "%s var: %5.2f std: %5.2f\n", argv[2], var, sqrt(var));
 	}
-	codec2_destroy(codec2);
+	cc2.codec2_destroy(codec2);
 
 	free(buf);
 	free(bits);
