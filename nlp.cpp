@@ -32,7 +32,9 @@
 #include "defines.h"
 #include "nlp.h"
 #include "dump.h"
+#include "kiss_fft.h"
 
+extern CKissFFT kiss;
 
 /*---------------------------------------------------------------------------*\
 
@@ -193,7 +195,7 @@ void Cnlp::nlp_create(C2CONST *c2const)
 	for(i=0; i<NLP_NTAP; i++)
 		snlp.mem_fir[i] = 0.0;
 
-	snlp.fft_cfg = kiss_fft_alloc(PE_FFT_SIZE, 0, NULL, NULL);
+	snlp.fft_cfg = kiss.fft_alloc(PE_FFT_SIZE, 0, NULL, NULL);
 	assert(snlp.fft_cfg != NULL);
 }
 
@@ -519,10 +521,10 @@ void Cnlp::codec2_fft_inplace(kiss_fft_state *cfg, std::complex<float> *inout)
 	if (cfg->nfft <= 512)
 	{
 		memcpy(in, inout, cfg->nfft*sizeof(std::complex<float>));
-		kiss_fft(cfg, in, inout);
+		kiss.fft(cfg, in, inout);
 	}
 	else
 	{
-		kiss_fft(cfg, inout, inout);
+		kiss.fft(cfg, inout, inout);
 	}
 }

@@ -36,7 +36,9 @@
 #include "quantise.h"
 #include "lpc.h"
 #include "lsp.h"
-#include "kiss_fftr.h"
+#include "kiss_fft.h"
+
+extern CKissFFT kiss;
 
 #define LSP_DELTA1 0.01         /* grid spacing for LSP root searches */
 
@@ -265,7 +267,7 @@ void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float
 		x[i] = ak[i] * coeff;
 		coeff *= gamma;
 	}
-	kiss_fftr(fftr_fwd_cfg, x, Ww);
+	kiss.fftr(fftr_fwd_cfg, x, Ww);
 
 	for(i=0; i<FFT_ENC/2; i++)
 	{
@@ -382,7 +384,7 @@ void CQuantize::aks_to_M2(
 
 		for(i=0; i<=order; i++)
 			a[i] = ak[i];
-		kiss_fftr(fftr_fwd_cfg, a, Aw);
+		kiss.fftr(fftr_fwd_cfg, a, Aw);
 	}
 
 	/* Determine power spectrum P(w) = E/(A(exp(jw))^2 ------------------------*/

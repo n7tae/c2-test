@@ -49,6 +49,7 @@ static Cnlp nlp;
 static CQuantize qt;
 static CNewamp1 na1;
 static CNewamp2 na2;
+CKissFFT kiss;
 
 /*---------------------------------------------------------------------------* \
 
@@ -176,11 +177,11 @@ struct CODEC2 * codec2_create(int mode)
 	c2->hpf_states[0] = c2->hpf_states[1] = 0.0;
 	for(i=0; i<2*n_samp; i++)
 		c2->Sn_[i] = 0;
-	c2->fft_fwd_cfg = kiss_fft_alloc(FFT_ENC, 0, NULL, NULL);
-	c2->fftr_fwd_cfg = kiss_fftr_alloc(FFT_ENC, 0, NULL, NULL);
+	c2->fft_fwd_cfg = kiss.fft_alloc(FFT_ENC, 0, NULL, NULL);
+	c2->fftr_fwd_cfg = kiss.fftr_alloc(FFT_ENC, 0, NULL, NULL);
 	make_analysis_window(&c2->c2const, c2->fft_fwd_cfg, c2->w,c2->W);
 	make_synthesis_window(&c2->c2const, c2->Pn);
-	c2->fftr_inv_cfg = kiss_fftr_alloc(FFT_DEC, 1, NULL, NULL);
+	c2->fftr_inv_cfg = kiss.fftr_alloc(FFT_DEC, 1, NULL, NULL);
 	c2->prev_f0_enc = 1/P_MAX_S;
 	c2->bg_est = 0.0;
 	c2->ex_phase = 0.0;
@@ -235,8 +236,8 @@ struct CODEC2 * codec2_create(int mode)
 		c2->eq_en = 0;
 		c2->Wo_left = 0.0;
 		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = kiss_fft_alloc(NEWAMP1_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = kiss_fft_alloc(NEWAMP1_PHASE_NFFT, 1, NULL, NULL);
+		c2->phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 0, NULL, NULL);
+		c2->phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 1, NULL, NULL);
 	}
 
 	/* newamp2 initialisation */
@@ -251,8 +252,8 @@ struct CODEC2 * codec2_create(int mode)
 		}
 		c2->Wo_left = 0.0;
 		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		c2->phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
+		c2->phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
 	}
 	/* newamp2 PWB initialisation */
 
@@ -266,8 +267,8 @@ struct CODEC2 * codec2_create(int mode)
 		}
 		c2->Wo_left = 0.0;
 		c2->voicing_left = 0;;
-		c2->phase_fft_fwd_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		c2->phase_fft_inv_cfg = kiss_fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		c2->phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
+		c2->phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
 	}
 
 	c2->fmlfeat = NULL;
@@ -2686,7 +2687,7 @@ void make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w
 	for(i=FFT_ENC-nw/2,j=m_pitch/2-nw/2; i<FFT_ENC; i++,j++)
 		wshift[i].real(w[j]);
 
-	kiss_fft(fft_fwd_cfg, wshift, temp);
+	kiss.fft(fft_fwd_cfg, wshift, temp);
 
 	/*
 	    Re-arrange W[] to be symmetrical about FFT_ENC/2.  Makes later
@@ -3124,7 +3125,7 @@ void synthesise(
 
 	/* Perform inverse DFT */
 
-	kiss_fftri(fftr_inv_cfg, Sw_,sw_);
+	kiss.fftri(fftr_inv_cfg, Sw_,sw_);
 
 	/* Overlap add to previous samples */
 
