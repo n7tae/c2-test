@@ -20,7 +20,7 @@ public:
 	void fft(kiss_fft_state *cfg, const std::complex<float> *fin, std::complex<float> *fout);
 	void fft_stride(kiss_fft_state *cfg, const std::complex<float> *fin, std::complex<float> *fout, int fin_stride);
 	int fft_next_fast_size(int n);
-	kiss_fftr_state *fftr_alloc(int nfft,int inverse_fft,void * mem, size_t * lenmem);
+	kiss_fftr_state *fftr_alloc(int nfft, int inverse_fft, void * mem, size_t * lenmem);
 	void fftr(kiss_fftr_state *cfg,const float *timedata,std::complex<float> *freqdata);
 	void fftri(kiss_fftr_state *cfg,const std::complex<float> *freqdata,float *timedata);
 private:

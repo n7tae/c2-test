@@ -312,7 +312,7 @@ void CKissFFT::kf_factor(int n,int * facbuf)
  * */
 kiss_fft_state *CKissFFT::fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
 {
-	kiss_fft_state *st=NULL;
+	kiss_fft_state *st = NULL;
 	size_t memneeded = sizeof(struct kiss_fft_state) + sizeof(std::complex<float>)*(nfft-1); /* twiddle factors*/
 
 	if ( lenmem==NULL )
@@ -396,7 +396,7 @@ kiss_fftr_state *CKissFFT::fftr_alloc(int nfft, int inverse_fft, void * mem, siz
 	}
 	nfft >>= 1;
 
-	fft_alloc (nfft, inverse_fft, NULL, &subsize);
+	fft_alloc(nfft, inverse_fft, NULL, &subsize);
 	memneeded = sizeof(struct kiss_fftr_state) + subsize + sizeof(std::complex<float>) * ( nfft * 3 / 2);
 
 	if (lenmem == NULL)
