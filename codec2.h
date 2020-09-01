@@ -97,27 +97,27 @@
 class CCodec2
 {
 public:
-	CODEC2 *codec2_create(int mode);
-	void codec2_destroy(CODEC2 *codec2_state);
-	void codec2_encode(CODEC2 *codec2_state, unsigned char * bits, short speech_in[]);
-	void codec2_decode(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits);
-	int  codec2_samples_per_frame(CODEC2 *codec2_state);
-	int  codec2_bits_per_frame(CODEC2 *codec2_state);
-	void codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_filename, char *model_filename);
-	void codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename);
-	void codec2_set_natural_or_gray(CODEC2 *codec2_state, int gray);
-	void codec2_700c_eq(CODEC2 *codec2_state, int en);
-	float codec2_get_var(CODEC2 *codec2_state);
-	float *codec2_enable_user_ratek(CODEC2 *codec2_state, int *K);
-	void codec2_700c_post_filter(CODEC2 *codec2_state, int en);
-	void codec2_set_softdec(CODEC2 *c2, float *softdec);
-	float codec2_get_energy(CODEC2 *codec2_state, const unsigned char *bits);
-	void codec2_decode_ber(CODEC2 *codec2_state, short speech_out[], const unsigned char *bits, float ber_est);
+	bool codec2_create(int mode);
+	void codec2_destroy();
+	void codec2_encode(unsigned char * bits, short speech_in[]);
+	void codec2_decode(short speech_out[], const unsigned char *bits);
+	int  codec2_samples_per_frame();
+	int  codec2_bits_per_frame();
+	void codec2_open_mlfeat(char *feat_filename, char *model_filename);
+	void codec2_load_codebook(int num, char *filename);
+	void codec2_set_natural_or_gray(int gray);
+	void codec2_700c_eq(int en);
+	float codec2_get_var();
+	float *codec2_enable_user_ratek(int *K);
+	void codec2_700c_post_filter(int en);
+	void codec2_set_softdec(float *softdec);
+	float codec2_get_energy(const unsigned char *bits);
+	void codec2_decode_ber(short speech_out[], const unsigned char *bits, float ber_est);
 
 private:
-	void codec2_set_lpc_post_filter(CODEC2 *codec2_state, int enable, int bass_boost, float beta, float gamma);
-	int  codec2_get_spare_bit_index(CODEC2 *codec2_state);
-	int  codec2_rebuild_spare_bit(CODEC2 *codec2_state, char unpacked_bits[]);
+	void codec2_set_lpc_post_filter(int enable, int bass_boost, float beta, float gamma);
+	int  codec2_get_spare_bit_index();
+	int  codec2_rebuild_spare_bit(char unpacked_bits[]);
 
 	// merged from other files
 	void sample_phase(MODEL *model, std::complex<float> filter_phase[], std::complex<float> A[]);
@@ -142,36 +142,37 @@ private:
 	float interp_energy2(float prev, float next, float weight);
 	void interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order);
 
-	void analyse_one_frame(CODEC2 *c2, MODEL *model, short speech[]);
-	void synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain);
-	void codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char * bits);
-	void codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char * bits);
-	void codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char * bits);
-	void codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char * bits);
-	void codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char * bits, float ber_est);
-	void codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char * bits);
-	void codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char * bits);
-	void codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]);
-	void codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char * bits);
-	void codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned char * bits);
+	void analyse_one_frame(MODEL *model, short speech[]);
+	void synthesise_one_frame(short speech[], MODEL *model, std::complex<float> Aw[], float gain);
+	void codec2_encode_3200(unsigned char * bits, short speech[]);
+	void codec2_decode_3200(short speech[], const unsigned char * bits);
+	void codec2_encode_2400(unsigned char * bits, short speech[]);
+	void codec2_decode_2400(short speech[], const unsigned char * bits);
+	void codec2_encode_1600(unsigned char * bits, short speech[]);
+	void codec2_decode_1600(short speech[], const unsigned char * bits);
+	void codec2_encode_1400(unsigned char * bits, short speech[]);
+	void codec2_decode_1400(short speech[], const unsigned char * bits);
+	void codec2_encode_1300(unsigned char * bits, short speech[]);
+	void codec2_decode_1300(short speech[], const unsigned char * bits, float ber_est);
+	void codec2_encode_1200(unsigned char * bits, short speech[]);
+	void codec2_decode_1200(short speech[], const unsigned char * bits);
+	void codec2_encode_700c(unsigned char * bits, short speech[]);
+	void codec2_decode_700c(short speech[], const unsigned char * bits);
+	void codec2_encode_450(unsigned char * bits, short speech[]);
+	void codec2_decode_450(short speech[], const unsigned char * bits);
+	void codec2_decode_450pwb(short speech[], const unsigned char * bits);
 	void ear_protection(float in_out[], int n);
-	float codec2_energy_700c(CODEC2 *c2, const unsigned char * bits);
-	float codec2_energy_450(CODEC2 *c2, const unsigned char * bits);
+	float codec2_energy_700c(const unsigned char * bits);
+	float codec2_energy_450(const unsigned char * bits);
 
-	void (CCodec2::*encode)(struct codec2_tag *c2, unsigned char * bits, short speech[]);
-	void (CCodec2::*decode)(struct codec2_tag *c2, short speech[], const unsigned char * bits);
-	void (CCodec2::*decode_ber)(struct codec2_tag *c2, short speech[], const unsigned char * bits, float ber_est);
+	void (CCodec2::*encode)(unsigned char * bits, short speech[]);
+	void (CCodec2::*decode)(short speech[], const unsigned char * bits);
+	void (CCodec2::*decode_ber)(short speech[], const unsigned char * bits, float ber_est);
 	Cnlp nlp;
 	CQuantize qt;
 	CNewamp1 na1;
 	CNewamp2 na2;
+	CODEC2 c2;
 };
 
 #endif

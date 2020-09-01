@@ -145,10 +145,10 @@ int main(int argc, char *argv[])
 	dump = 0;
 #endif
 
-	auto codec2 = cc2.codec2_create(mode);
-	assert(codec2 != NULL);
-	nsam = cc2.codec2_samples_per_frame(codec2);
-	nbit = cc2.codec2_bits_per_frame(codec2);
+	if (cc2.codec2_create(mode))
+		return 1;
+	nsam = cc2.codec2_samples_per_frame();
+	nbit = cc2.codec2_bits_per_frame();
 	buf = (short*)malloc(nsam*sizeof(short));
 	nbyte = (nbit + 7) / 8;
 	bits = (unsigned char*)malloc(nbyte*sizeof(char));
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 			{
 				/* load VQ stage (700C only) */
 				//fprintf(stderr, "%s\n", optarg+1);
-				cc2.codec2_load_codebook(codec2, atoi(optarg)-1, argv[optind]);
+				cc2.codec2_load_codebook(atoi(optarg)-1, argv[optind]);
 			}
 			else if (strcmp(long_options[option_index].name, "loadratek") == 0)
 			{
@@ -214,16 +214,16 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "%s\n", optarg);
 				f_ratek = fopen(optarg, "rb");
 				assert(f_ratek != NULL);
-				user_ratek = cc2.codec2_enable_user_ratek(codec2, &K);
+				user_ratek = cc2.codec2_enable_user_ratek(&K);
 			}
 			else if (strcmp(long_options[option_index].name, "nopf") == 0)
 			{
-				cc2.codec2_700c_post_filter(codec2, 0);
+				cc2.codec2_700c_post_filter(0);
 			}
 			else if (strcmp(long_options[option_index].name, "mlfeat") == 0)
 			{
 				/* dump machine learning features (700C only) */
-				cc2.codec2_open_mlfeat(codec2, optarg, NULL);
+				cc2.codec2_open_mlfeat(optarg, NULL);
 			}
 			break;
 
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	assert(nend_bit <= nbit);
-	cc2.codec2_set_natural_or_gray(codec2, !natural);
+	cc2.codec2_set_natural_or_gray(!natural);
 	//printf("%d %d\n", nstart_bit, nend_bit);
 
 	//fprintf(stderr, "softdec: %d natural: %d\n", softdec, natural);
@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
 					byte++;
 				}
 			}
-			cc2.codec2_set_softdec(codec2, softdec_bits);
+			cc2.codec2_set_softdec(softdec_bits);
 		}
 
 		if (bitperchar)
@@ -376,12 +376,12 @@ int main(int argc, char *argv[])
 		}
 
 		if (report_energy)
-			fprintf(stderr, "Energy: %1.3f\n", cc2.codec2_get_energy(codec2, bits));
+			fprintf(stderr, "Energy: %1.3f\n", cc2.codec2_get_energy(bits));
 
 		if (f_ratek != NULL)
 			ret = fread(user_ratek, sizeof(float), K, f_ratek);
 
-		cc2.codec2_decode_ber(codec2, buf, bits, ber_est);
+		cc2.codec2_decode_ber(buf, bits, ber_est);
 		fwrite(buf, sizeof(short), nsam, fout);
 
 		//if this is in a pipeline, we probably don't want the usual
@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
 	if (error_mode)
 		fprintf(stderr, "actual BER: %1.3f\n", (float)bit_errors/bits_proc);
 
-	cc2.codec2_destroy(codec2);
+	cc2.codec2_destroy();
 
 	free(buf);
 	free(bits);

@@ -78,14 +78,11 @@ CKissFFT kiss;
 
 
 //Don't create CODEC2_MODE_450PWB for Encoding as it has undefined behavior !
-CODEC2 *CCodec2::codec2_create(int mode)
+bool CCodec2::codec2_create(int mode)
 {
-	static CODEC2 codec2;
-	int i,l;
-
 	// ALL POSSIBLE MODES MUST BE CHECKED HERE!
 	// we test if the desired mode is enabled at compile time
-	// and return NULL if not
+	// and return true if not
 
 	if (false == ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, mode)
 				   || CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, mode)
@@ -98,151 +95,127 @@ CODEC2 *CCodec2::codec2_create(int mode)
 				   || CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, mode)
 				 ) )
 	{
-		return NULL;
+		return true;
 	}
 
-
-	codec2.mode = mode;
+	c2.mode = mode;
 
 	/* store constants in a few places for convenience */
 
 	if (CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, mode) == 0)
 	{
-		codec2.c2const = c2const_create(8000, N_S);
+		c2.c2const = c2const_create(8000, N_S);
 	}
 	else
 	{
-		codec2.c2const = c2const_create(16000, N_S);
+		c2.c2const = c2const_create(16000, N_S);
 	}
-	codec2.Fs = codec2.c2const.Fs;
-	int n_samp = codec2.n_samp = codec2.c2const.n_samp;
-	int m_pitch = codec2.m_pitch = codec2.c2const.m_pitch;
+	c2.Fs = c2.c2const.Fs;
+	int n_samp = c2.n_samp = c2.c2const.n_samp;
+	int m_pitch = c2.m_pitch = c2.c2const.m_pitch;
 
-	codec2.Pn = (float*)malloc(2*n_samp*sizeof(float));
-	if (codec2.Pn == NULL)
+	c2.Pn.resize(2*n_samp);
+	c2.Sn_.resize(2*n_samp);
+	c2.w.resize(m_pitch);
+	c2.Sn.resize(m_pitch);
+
+	for(int i=0; i<m_pitch; i++)
+		c2.Sn[i] = 1.0;
+	c2.hpf_states[0] = c2.hpf_states[1] = 0.0;
+	for(int i=0; i<2*n_samp; i++)
+		c2.Sn_[i] = 0;
+	kiss.fft_alloc(c2.fft_fwd_cfg, FFT_ENC, false);
+	kiss.fftr_alloc(c2.fftr_fwd_cfg, FFT_ENC, false);
+	make_analysis_window(&c2.c2const, &c2.fft_fwd_cfg, c2.w.data(), c2.W);
+	make_synthesis_window(&c2.c2const, c2.Pn.data());
+	kiss.fftr_alloc(c2.fftr_inv_cfg, FFT_DEC, true);
+	c2.prev_f0_enc = 1/P_MAX_S;
+	c2.bg_est = 0.0;
+	c2.ex_phase = 0.0;
+
+	for(int l=1; l<=MAX_AMP; l++)
+		c2.prev_model_dec.A[l] = 0.0;
+	c2.prev_model_dec.Wo = TWO_PI/c2.c2const.p_max;
+	c2.prev_model_dec.L = PI/c2.prev_model_dec.Wo;
+	c2.prev_model_dec.voiced = 0;
+
+	for(int i=0; i<LPC_ORD; i++)
 	{
-		return NULL;
+		c2.prev_lsps_dec[i] = i*PI/(LPC_ORD+1);
 	}
-	codec2.Sn_ = (float*)malloc(2*n_samp*sizeof(float));
-	if (codec2.Sn_ == NULL)
-	{
-		free(codec2.Pn);
-		return NULL;
-	}
-	codec2.w = (float*)malloc(m_pitch*sizeof(float));
-	if (codec2.w == NULL)
-	{
-		free(codec2.Pn);
-		free(codec2.Sn_);
-		return NULL;
-	}
-	codec2.Sn = (float*)malloc(m_pitch*sizeof(float));
-	if (codec2.Sn == NULL)
-	{
-		free(codec2.Pn);
-		free(codec2.Sn_);
-		free(codec2.w);
-		return NULL;
-	}
+	c2.prev_e_dec = 1;
 
-	for(i=0; i<m_pitch; i++)
-		codec2.Sn[i] = 1.0;
-	codec2.hpf_states[0] = codec2.hpf_states[1] = 0.0;
-	for(i=0; i<2*n_samp; i++)
-		codec2.Sn_[i] = 0;
-	kiss.fft_alloc(codec2.fft_fwd_cfg, FFT_ENC, false);
-	kiss.fftr_alloc(codec2.fftr_fwd_cfg, FFT_ENC, false);
-	make_analysis_window(&codec2.c2const, &codec2.fft_fwd_cfg, codec2.w,codec2.W);
-	make_synthesis_window(&codec2.c2const, codec2.Pn);
-	kiss.fftr_alloc(codec2.fftr_inv_cfg, FFT_DEC, true);
-	codec2.prev_f0_enc = 1/P_MAX_S;
-	codec2.bg_est = 0.0;
-	codec2.ex_phase = 0.0;
+	nlp.nlp_create(&c2.c2const);
 
-	for(l=1; l<=MAX_AMP; l++)
-		codec2.prev_model_dec.A[l] = 0.0;
-	codec2.prev_model_dec.Wo = TWO_PI/codec2.c2const.p_max;
-	codec2.prev_model_dec.L = PI/codec2.prev_model_dec.Wo;
-	codec2.prev_model_dec.voiced = 0;
+	c2.lpc_pf = 1;
+	c2.bass_boost = 1;
+	c2.beta = LPCPF_BETA;
+	c2.gamma = LPCPF_GAMMA;
 
-	for(i=0; i<LPC_ORD; i++)
-	{
-		codec2.prev_lsps_dec[i] = i*PI/(LPC_ORD+1);
-	}
-	codec2.prev_e_dec = 1;
+	c2.xq_enc[0] = c2.xq_enc[1] = 0.0;
+	c2.xq_dec[0] = c2.xq_dec[1] = 0.0;
 
-	nlp.nlp_create(&codec2.c2const);
+	c2.smoothing = 0;
+	c2.se = 0.0;
+	c2.nse = 0;
+	c2.user_rate_K_vec_no_mean_.clear();
+	c2.post_filter_en = 1;
 
-	codec2.lpc_pf = 1;
-	codec2.bass_boost = 1;
-	codec2.beta = LPCPF_BETA;
-	codec2.gamma = LPCPF_GAMMA;
+	c2.bpf_buf.resize(BPF_N+4*c2.n_samp);
+	for(int i=0; i<BPF_N+4*c2.n_samp; i++)
+		c2.bpf_buf[i] = 0.0;
 
-	codec2.xq_enc[0] = codec2.xq_enc[1] = 0.0;
-	codec2.xq_dec[0] = codec2.xq_dec[1] = 0.0;
-
-	codec2.smoothing = 0;
-	codec2.se = 0.0;
-	codec2.nse = 0;
-	codec2.user_rate_K_vec_no_mean_ = NULL;
-	codec2.post_filter_en = 1;
-
-	codec2.bpf_buf = (float*)malloc(sizeof(float)*(BPF_N+4*codec2.n_samp));
-	assert(codec2.bpf_buf != NULL);
-	for(i=0; i<BPF_N+4*codec2.n_samp; i++)
-		codec2.bpf_buf[i] = 0.0;
-
-	codec2.softdec = NULL;
-	codec2.gray = 1;
+	c2.softdec = NULL;
+	c2.gray = 1;
 
 	/* newamp1 initialisation */
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2.mode))
 	{
-		na1.mel_sample_freqs_kHz(codec2.rate_K_sample_freqs_kHz, NEWAMP1_K, na1.ftomel(200.0), na1.ftomel(3700.0) );
+		na1.mel_sample_freqs_kHz(c2.rate_K_sample_freqs_kHz, NEWAMP1_K, na1.ftomel(200.0), na1.ftomel(3700.0) );
 		for(int k=0; k<NEWAMP1_K; k++)
 		{
-			codec2.prev_rate_K_vec_[k] = 0.0;
-			codec2.eq[k] = 0.0;
+			c2.prev_rate_K_vec_[k] = 0.0;
+			c2.eq[k] = 0.0;
 		}
-		codec2.eq_en = 0;
-		codec2.Wo_left = 0.0;
-		codec2.voicing_left = 0;
-		kiss.fft_alloc(codec2.phase_fft_fwd_cfg, NEWAMP1_PHASE_NFFT, false);
-		kiss.fft_alloc(codec2.phase_fft_inv_cfg, NEWAMP1_PHASE_NFFT, true);
+		c2.eq_en = 0;
+		c2.Wo_left = 0.0;
+		c2.voicing_left = 0;
+		kiss.fft_alloc(c2.phase_fft_fwd_cfg, NEWAMP1_PHASE_NFFT, false);
+		kiss.fft_alloc(c2.phase_fft_inv_cfg, NEWAMP1_PHASE_NFFT, true);
 	}
 
 	/* newamp2 initialisation */
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2.mode))
 	{
-		na2.n2_mel_sample_freqs_kHz(codec2.n2_rate_K_sample_freqs_kHz, NEWAMP2_K);
+		na2.n2_mel_sample_freqs_kHz(c2.n2_rate_K_sample_freqs_kHz, NEWAMP2_K);
 		for(int k=0; k<NEWAMP2_K; k++)
 		{
-			codec2.n2_prev_rate_K_vec_[k] = 0.0;
+			c2.n2_prev_rate_K_vec_[k] = 0.0;
 		}
-		codec2.Wo_left = 0.0;
-		codec2.voicing_left = 0;
-		kiss.fft_alloc(codec2.phase_fft_fwd_cfg, NEWAMP2_PHASE_NFFT, false);
-		kiss.fft_alloc(codec2.phase_fft_inv_cfg, NEWAMP2_PHASE_NFFT, true);
+		c2.Wo_left = 0.0;
+		c2.voicing_left = 0;
+		kiss.fft_alloc(c2.phase_fft_fwd_cfg, NEWAMP2_PHASE_NFFT, false);
+		kiss.fft_alloc(c2.phase_fft_inv_cfg, NEWAMP2_PHASE_NFFT, true);
 	}
 	/* newamp2 PWB initialisation */
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2.mode))
 	{
-		na2.n2_mel_sample_freqs_kHz(codec2.n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K);
+		na2.n2_mel_sample_freqs_kHz(c2.n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K);
 		for(int k=0; k<NEWAMP2_16K_K; k++)
 		{
-			codec2.n2_pwb_prev_rate_K_vec_[k] = 0.0;
+			c2.n2_pwb_prev_rate_K_vec_[k] = 0.0;
 		}
-		codec2.Wo_left = 0.0;
-		codec2.voicing_left = 0;
-		kiss.fft_alloc(codec2.phase_fft_fwd_cfg, NEWAMP2_PHASE_NFFT, false);
-		kiss.fft_alloc(codec2.phase_fft_inv_cfg, NEWAMP2_PHASE_NFFT, true);
+		c2.Wo_left = 0.0;
+		c2.voicing_left = 0;
+		kiss.fft_alloc(c2.phase_fft_fwd_cfg, NEWAMP2_PHASE_NFFT, false);
+		kiss.fft_alloc(c2.phase_fft_inv_cfg, NEWAMP2_PHASE_NFFT, true);
 	}
 
-	codec2.fmlfeat = NULL;
-	codec2.fmlmodel = NULL;
+	c2.fmlfeat = NULL;
+	c2.fmlmodel = NULL;
 
 	// make sure that one of the two decode function pointers is empty
 	// for the encode function pointer this is not required since we always set it
@@ -251,55 +224,55 @@ CODEC2 *CCodec2::codec2_create(int mode)
 	decode = NULL;
 	decode_ber = NULL;
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_3200;
 		decode = &CCodec2::codec2_decode_3200;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_2400;
 		decode = &CCodec2::codec2_decode_2400;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_1600;
 		decode = &CCodec2::codec2_decode_1600;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_1400;
 		decode = &CCodec2::codec2_decode_1400;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_1300;
 		decode_ber = &CCodec2::codec2_decode_1300;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_1200;
 		decode = &CCodec2::codec2_decode_1200;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_700c;
 		decode = &CCodec2::codec2_decode_700c;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2.mode))
 	{
 		encode = &CCodec2::codec2_encode_450;
 		decode = &CCodec2::codec2_decode_450;
 	}
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, codec2.mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2.mode))
 	{
 		//Encode PWB doesnt make sense
 		encode = &CCodec2::codec2_encode_450;
@@ -307,7 +280,7 @@ CODEC2 *CCodec2::codec2_create(int mode)
 	}
 
 
-	return &codec2;
+	return false;
 }
 
 /*---------------------------------------------------------------------------*\
@@ -320,24 +293,23 @@ CODEC2 *CCodec2::codec2_create(int mode)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_destroy(CODEC2 *c2)
+void CCodec2::codec2_destroy()
 {
-	assert(c2 != NULL);
-	free(c2->bpf_buf);
+	c2.bpf_buf.clear();
 	nlp.nlp_destroy();
-	c2->fft_fwd_cfg.twiddles.clear();
-	c2->fftr_fwd_cfg.substate.twiddles.clear();
-	c2->fftr_fwd_cfg.tmpbuf.clear();
-	c2->fftr_fwd_cfg.super_twiddles.clear();
-	c2->fftr_inv_cfg.substate.twiddles.clear();
-	c2->fftr_inv_cfg.tmpbuf.clear();
-	c2->fftr_inv_cfg.super_twiddles.clear();
-	c2->phase_fft_fwd_cfg.twiddles.clear();
-	c2->phase_fft_inv_cfg.twiddles.clear();
-	free(c2->Pn);
-	free(c2->Sn);
-	free(c2->w);
-	free(c2->Sn_);
+	c2.fft_fwd_cfg.twiddles.clear();
+	c2.fftr_fwd_cfg.substate.twiddles.clear();
+	c2.fftr_fwd_cfg.tmpbuf.clear();
+	c2.fftr_fwd_cfg.super_twiddles.clear();
+	c2.fftr_inv_cfg.substate.twiddles.clear();
+	c2.fftr_inv_cfg.tmpbuf.clear();
+	c2.fftr_inv_cfg.super_twiddles.clear();
+	c2.phase_fft_fwd_cfg.twiddles.clear();
+	c2.phase_fft_inv_cfg.twiddles.clear();
+	c2.Pn.clear();
+	c2.Sn.clear();
+	c2.w.clear();
+	c2.Sn_.clear();
 }
 
 /*---------------------------------------------------------------------------*\
@@ -350,25 +322,25 @@ void CCodec2::codec2_destroy(CODEC2 *c2)
 
 \*---------------------------------------------------------------------------*/
 
-int CCodec2::codec2_bits_per_frame(CODEC2 *c2)
+int CCodec2::codec2_bits_per_frame()
 {
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2.mode))
 		return 64;
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2.mode))
 		return 48;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2.mode))
 		return 64;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2.mode))
 		return 56;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2.mode))
 		return 52;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2.mode))
 		return 48;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2.mode))
 		return 28;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2.mode))
 		return 18;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2.mode))
 		return 18;
 
 	return 0; /* shouldn't get here */
@@ -385,54 +357,52 @@ int CCodec2::codec2_bits_per_frame(CODEC2 *c2)
 
 \*---------------------------------------------------------------------------*/
 
-int CCodec2::codec2_samples_per_frame(CODEC2 *c2)
+int CCodec2::codec2_samples_per_frame()
 {
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2.mode))
 		return 160;
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2.mode))
 		return 160;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2.mode))
 		return 320;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2.mode))
 		return 320;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2.mode))
 		return 320;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2.mode))
 		return 320;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2.mode))
 		return 320;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2.mode))
 		return 320;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
+	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2.mode))
 		return 640;
 	return 0; /* shouldnt get here */
 }
 
-void CCodec2::codec2_encode(CODEC2 *c2, unsigned char *bits, short speech[])
+void CCodec2::codec2_encode(unsigned char *bits, short speech[])
 {
-	assert(c2 != NULL);
 	assert(encode != NULL);
 
-	(*this.*encode)(c2, bits, speech);
+	(*this.*encode)(bits, speech);
 }
 
-void CCodec2::codec2_decode(CODEC2 *c2, short speech[], const unsigned char *bits)
+void CCodec2::codec2_decode(short speech[], const unsigned char *bits)
 {
-	codec2_decode_ber(c2, speech, bits, 0.0);
+	codec2_decode_ber(speech, bits, 0.0);
 }
 
-void CCodec2::codec2_decode_ber(CODEC2 *c2, short speech[], const unsigned char *bits, float ber_est)
+void CCodec2::codec2_decode_ber(short speech[], const unsigned char *bits, float ber_est)
 {
-	assert(c2 != NULL);
 	assert(decode != NULL || decode_ber != NULL);
 
 	if (decode != NULL)
 	{
-		(*this.*decode)(c2, speech, bits);
+		(*this.*decode)(speech, bits);
 	}
 	else
 	{
-		(*this.*decode_ber)(c2, speech, bits, ber_est);
+		(*this.*decode_ber)(speech, bits, ber_est);
 	}
 }
 
@@ -463,7 +433,7 @@ void CCodec2::codec2_decode_ber(CODEC2 *c2, short speech[], const unsigned char 
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_3200(unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   ak[LPC_ORD+1];
@@ -474,23 +444,21 @@ void CCodec2::codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[
 	int     i;
 	unsigned int nbit = 0;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0', ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0', ((codec2_bits_per_frame() + 7) / 8));
 
 	/* first 10ms analysis frame - we just want voicing */
 
-	analyse_one_frame(c2, &model, speech);
+	analyse_one_frame(&model, speech);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* second 10ms analysis frame */
 
-	analyse_one_frame(c2, &model, &speech[c2->n_samp]);
+	analyse_one_frame(&model, &speech[c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
-	Wo_index = qt.encode_Wo(&c2->c2const, model.Wo, WO_BITS);
+	Wo_index = qt.encode_Wo(&c2.c2const, model.Wo, WO_BITS);
 	qt.pack(bits, &nbit, Wo_index, WO_BITS);
 
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
 	e_index = qt.encode_energy(e, E_BITS);
 	qt.pack(bits, &nbit, e_index, E_BITS);
 
@@ -499,7 +467,7 @@ void CCodec2::codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[
 	{
 		qt.pack(bits, &nbit, lspd_indexes[i], qt.lspd_bits(i));
 	}
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -513,7 +481,7 @@ void CCodec2::codec2_encode_3200(CODEC2 *c2, unsigned char * bits, short speech[
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_3200(short speech[], const unsigned char * bits)
 {
 	MODEL   model[2];
 	int     lspd_indexes[LPC_ORD];
@@ -525,8 +493,6 @@ void CCodec2::codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char
 	int     i,j;
 	unsigned int nbit = 0;
 	std::complex<float>    Aw[FFT_ENC];
-
-	assert(c2 != NULL);
 
 	/* only need to zero these out due to (unused) snr calculation */
 
@@ -543,7 +509,7 @@ void CCodec2::codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char
 	model[1].voiced = qt.unpack(bits, &nbit, 1);
 
 	Wo_index = qt.unpack(bits, &nbit, WO_BITS);
-	model[1].Wo = qt.decode_Wo(&c2->c2const, Wo_index, WO_BITS);
+	model[1].Wo = qt.decode_Wo(&c2.c2const, Wo_index, WO_BITS);
 	model[1].L  = PI/model[1].Wo;
 
 	e_index = qt.unpack(bits, &nbit, E_BITS);
@@ -560,28 +526,28 @@ void CCodec2::codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char
 	/* Wo and energy are sampled every 20ms, so we interpolate just 1
 	   10ms frame between 20ms samples */
 
-	interp_Wo(&model[0], &c2->prev_model_dec, &model[1], c2->c2const.Wo_min);
-	e[0] = interp_energy(c2->prev_e_dec, e[1]);
+	interp_Wo(&model[0], &c2.prev_model_dec, &model[1], c2.c2const.Wo_min);
+	e[0] = interp_energy(c2.prev_e_dec, e[1]);
 
 	/* LSPs are sampled every 20ms so we interpolate the frame in
 	   between, then recover spectral amplitudes */
 
-	interpolate_lsp_ver2(&lsps[0][0], c2->prev_lsps_dec, &lsps[1][0], 0.5, LPC_ORD);
+	interpolate_lsp_ver2(&lsps[0][0], c2.prev_lsps_dec, &lsps[1][0], 0.5, LPC_ORD);
 
 	for(i=0; i<2; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 	}
 
 	/* update memories for next frame ----------------------------*/
 
-	c2->prev_model_dec = model[1];
-	c2->prev_e_dec = e[1];
+	c2.prev_model_dec = model[1];
+	c2.prev_e_dec = e[1];
 	for(i=0; i<LPC_ORD; i++)
-		c2->prev_lsps_dec[i] = lsps[1][i];
+		c2.prev_lsps_dec[i] = lsps[1][i];
 }
 
 
@@ -610,7 +576,7 @@ void CCodec2::codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_2400(unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   ak[LPC_ORD+1];
@@ -622,22 +588,20 @@ void CCodec2::codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[
 	int     spare = 0;
 	unsigned int nbit = 0;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0', ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0', ((codec2_bits_per_frame() + 7) / 8));
 
 	/* first 10ms analysis frame - we just want voicing */
 
-	analyse_one_frame(c2, &model, speech);
+	analyse_one_frame(&model, speech);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* second 10ms analysis frame */
 
-	analyse_one_frame(c2, &model, &speech[c2->n_samp]);
+	analyse_one_frame(&model, &speech[c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
-	WoE_index = qt.encode_WoE(&model, e, c2->xq_enc);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
+	WoE_index = qt.encode_WoE(&model, e, c2.xq_enc);
 	qt.pack(bits, &nbit, WoE_index, WO_E_BITS);
 
 	qt.encode_lsps_scalar(lsp_indexes, lsps, LPC_ORD);
@@ -647,7 +611,7 @@ void CCodec2::codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[
 	}
 	qt.pack(bits, &nbit, spare, 2);
 
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -661,7 +625,7 @@ void CCodec2::codec2_encode_2400(CODEC2 *c2, unsigned char * bits, short speech[
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_2400(short speech[], const unsigned char * bits)
 {
 	MODEL   model[2];
 	int     lsp_indexes[LPC_ORD];
@@ -673,8 +637,6 @@ void CCodec2::codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char
 	int     i,j;
 	unsigned int nbit = 0;
 	std::complex<float>    Aw[FFT_ENC];
-
-	assert(c2 != NULL);
 
 	/* only need to zero these out due to (unused) snr calculation */
 
@@ -691,7 +653,7 @@ void CCodec2::codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char
 
 	model[1].voiced = qt.unpack(bits, &nbit, 1);
 	WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-	qt.decode_WoE(&c2->c2const, &model[1], &e[1], c2->xq_dec, WoE_index);
+	qt.decode_WoE(&c2.c2const, &model[1], &e[1], c2.xq_dec, WoE_index);
 
 	for(i=0; i<LSP_SCALAR_INDEXES; i++)
 	{
@@ -706,40 +668,40 @@ void CCodec2::codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char
 	/* Wo and energy are sampled every 20ms, so we interpolate just 1
 	   10ms frame between 20ms samples */
 
-	interp_Wo(&model[0], &c2->prev_model_dec, &model[1], c2->c2const.Wo_min);
-	e[0] = interp_energy(c2->prev_e_dec, e[1]);
+	interp_Wo(&model[0], &c2.prev_model_dec, &model[1], c2.c2const.Wo_min);
+	e[0] = interp_energy(c2.prev_e_dec, e[1]);
 
 	/* LSPs are sampled every 20ms so we interpolate the frame in
 	   between, then recover spectral amplitudes */
 
-	interpolate_lsp_ver2(&lsps[0][0], c2->prev_lsps_dec, &lsps[1][0], 0.5, LPC_ORD);
+	interpolate_lsp_ver2(&lsps[0][0], c2.prev_lsps_dec, &lsps[1][0], 0.5, LPC_ORD);
 	for(i=0; i<2; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 
 		/* dump parameters for deep learning experiments */
 
-		if (c2->fmlfeat != NULL)
+		if (c2.fmlfeat != NULL)
 		{
 			/* 10 LSPs - energy - Wo - voicing flag - 10 LPCs */
-			fwrite(&lsps[i][0], LPC_ORD, sizeof(float), c2->fmlfeat);
-			fwrite(&e[i], 1, sizeof(float), c2->fmlfeat);
-			fwrite(&model[i].Wo, 1, sizeof(float), c2->fmlfeat);
+			fwrite(&lsps[i][0], LPC_ORD, sizeof(float), c2.fmlfeat);
+			fwrite(&e[i], 1, sizeof(float), c2.fmlfeat);
+			fwrite(&model[i].Wo, 1, sizeof(float), c2.fmlfeat);
 			float voiced_float = model[i].voiced;
-			fwrite(&voiced_float, 1, sizeof(float), c2->fmlfeat);
-			fwrite(&ak[i][1], LPC_ORD, sizeof(float), c2->fmlfeat);
+			fwrite(&voiced_float, 1, sizeof(float), c2.fmlfeat);
+			fwrite(&ak[i][1], LPC_ORD, sizeof(float), c2.fmlfeat);
 		}
 	}
 
 	/* update memories for next frame ----------------------------*/
 
-	c2->prev_model_dec = model[1];
-	c2->prev_e_dec = e[1];
+	c2.prev_model_dec = model[1];
+	c2.prev_e_dec = e[1];
 	for(i=0; i<LPC_ORD; i++)
-		c2->prev_lsps_dec[i] = lsps[1][i];
+		c2.prev_lsps_dec[i] = lsps[1][i];
 }
 
 
@@ -771,7 +733,7 @@ void CCodec2::codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1600(unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -782,42 +744,40 @@ void CCodec2::codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[
 	int     i;
 	unsigned int nbit = 0;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0',  ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0',  ((codec2_bits_per_frame() + 7) / 8));
 
 	/* frame 1: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, speech);
+	analyse_one_frame(&model, speech);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* frame 2: - voicing, scalar Wo & E -------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[c2->n_samp]);
+	analyse_one_frame(&model, &speech[c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
-	Wo_index = qt.encode_Wo(&c2->c2const, model.Wo, WO_BITS);
+	Wo_index = qt.encode_Wo(&c2.c2const, model.Wo, WO_BITS);
 	qt.pack(bits, &nbit, Wo_index, WO_BITS);
 
 	/* need to run this just to get LPC energy */
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
 	e_index = qt.encode_energy(e, E_BITS);
 	qt.pack(bits, &nbit, e_index, E_BITS);
 
 	/* frame 3: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[2*c2->n_samp]);
+	analyse_one_frame(&model, &speech[2*c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* frame 4: - voicing, scalar Wo & E, scalar LSPs ------------------*/
 
-	analyse_one_frame(c2, &model, &speech[3*c2->n_samp]);
+	analyse_one_frame(&model, &speech[3*c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
-	Wo_index = qt.encode_Wo(&c2->c2const, model.Wo, WO_BITS);
+	Wo_index = qt.encode_Wo(&c2.c2const, model.Wo, WO_BITS);
 	qt.pack(bits, &nbit, Wo_index, WO_BITS);
 
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
 	e_index = qt.encode_energy(e, E_BITS);
 	qt.pack(bits, &nbit, e_index, E_BITS);
 
@@ -827,7 +787,7 @@ void CCodec2::codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[
 		qt.pack(bits, &nbit, lsp_indexes[i], qt.lsp_bits(i));
 	}
 
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -841,7 +801,7 @@ void CCodec2::codec2_encode_1600(CODEC2 *c2, unsigned char * bits, short speech[
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_1600(short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -854,8 +814,6 @@ void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char
 	unsigned int nbit = 0;
 	float   weight;
 	std::complex<float>    Aw[FFT_ENC];
-
-	assert(c2 != NULL);
 
 	/* only need to zero these out due to (unused) snr calculation */
 
@@ -872,7 +830,7 @@ void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char
 
 	model[1].voiced = qt.unpack(bits, &nbit, 1);
 	Wo_index = qt.unpack(bits, &nbit, WO_BITS);
-	model[1].Wo = qt.decode_Wo(&c2->c2const, Wo_index, WO_BITS);
+	model[1].Wo = qt.decode_Wo(&c2.c2const, Wo_index, WO_BITS);
 	model[1].L  = PI/model[1].Wo;
 
 	e_index = qt.unpack(bits, &nbit, E_BITS);
@@ -882,7 +840,7 @@ void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char
 
 	model[3].voiced = qt.unpack(bits, &nbit, 1);
 	Wo_index = qt.unpack(bits, &nbit, WO_BITS);
-	model[3].Wo = qt.decode_Wo(&c2->c2const, Wo_index, WO_BITS);
+	model[3].Wo = qt.decode_Wo(&c2.c2const, Wo_index, WO_BITS);
 	model[3].L  = PI/model[3].Wo;
 
 	e_index = qt.unpack(bits, &nbit, E_BITS);
@@ -901,9 +859,9 @@ void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char
 	/* Wo and energy are sampled every 20ms, so we interpolate just 1
 	   10ms frame between 20ms samples */
 
-	interp_Wo(&model[0], &c2->prev_model_dec, &model[1], c2->c2const.Wo_min);
-	e[0] = interp_energy(c2->prev_e_dec, e[1]);
-	interp_Wo(&model[2], &model[1], &model[3], c2->c2const.Wo_min);
+	interp_Wo(&model[0], &c2.prev_model_dec, &model[1], c2.c2const.Wo_min);
+	e[0] = interp_energy(c2.prev_e_dec, e[1]);
+	interp_Wo(&model[2], &model[1], &model[3], c2.c2const.Wo_min);
 	e[2] = interp_energy(e[1], e[3]);
 
 	/* LSPs are sampled every 40ms so we interpolate the 3 frames in
@@ -911,22 +869,22 @@ void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char
 
 	for(i=0, weight=0.25; i<3; i++, weight += 0.25)
 	{
-		interpolate_lsp_ver2(&lsps[i][0], c2->prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
+		interpolate_lsp_ver2(&lsps[i][0], c2.prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
 	}
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 	}
 
 	/* update memories for next frame ----------------------------*/
 
-	c2->prev_model_dec = model[3];
-	c2->prev_e_dec = e[3];
+	c2.prev_model_dec = model[3];
+	c2.prev_e_dec = e[3];
 	for(i=0; i<LPC_ORD; i++)
-		c2->prev_lsps_dec[i] = lsps[3][i];
+		c2.prev_lsps_dec[i] = lsps[3][i];
 
 }
 
@@ -957,7 +915,7 @@ void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1400(unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -968,38 +926,36 @@ void CCodec2::codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[
 	int     i;
 	unsigned int nbit = 0;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0',  ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0',  ((codec2_bits_per_frame() + 7) / 8));
 
 	/* frame 1: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, speech);
+	analyse_one_frame(&model, speech);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* frame 2: - voicing, joint Wo & E -------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[c2->n_samp]);
+	analyse_one_frame(&model, &speech[c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* need to run this just to get LPC energy */
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
 
-	WoE_index = qt.encode_WoE(&model, e, c2->xq_enc);
+	WoE_index = qt.encode_WoE(&model, e, c2.xq_enc);
 	qt.pack(bits, &nbit, WoE_index, WO_E_BITS);
 
 	/* frame 3: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[2*c2->n_samp]);
+	analyse_one_frame(&model, &speech[2*c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* frame 4: - voicing, joint Wo & E, scalar LSPs ------------------*/
 
-	analyse_one_frame(c2, &model, &speech[3*c2->n_samp]);
+	analyse_one_frame(&model, &speech[3*c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
-	WoE_index = qt.encode_WoE(&model, e, c2->xq_enc);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
+	WoE_index = qt.encode_WoE(&model, e, c2.xq_enc);
 	qt.pack(bits, &nbit, WoE_index, WO_E_BITS);
 
 	qt.encode_lsps_scalar(lsp_indexes, lsps, LPC_ORD);
@@ -1008,7 +964,7 @@ void CCodec2::codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[
 		qt.pack(bits, &nbit, lsp_indexes[i], qt.lsp_bits(i));
 	}
 
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -1022,7 +978,7 @@ void CCodec2::codec2_encode_1400(CODEC2 *c2, unsigned char * bits, short speech[
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_1400(short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -1035,8 +991,6 @@ void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char
 	unsigned int nbit = 0;
 	float   weight;
 	std::complex<float>    Aw[FFT_ENC];
-
-	assert(c2 != NULL);
 
 	/* only need to zero these out due to (unused) snr calculation */
 
@@ -1053,13 +1007,13 @@ void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char
 
 	model[1].voiced = qt.unpack(bits, &nbit, 1);
 	WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-	qt.decode_WoE(&c2->c2const, &model[1], &e[1], c2->xq_dec, WoE_index);
+	qt.decode_WoE(&c2.c2const, &model[1], &e[1], c2.xq_dec, WoE_index);
 
 	model[2].voiced = qt.unpack(bits, &nbit, 1);
 
 	model[3].voiced = qt.unpack(bits, &nbit, 1);
 	WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-	qt.decode_WoE(&c2->c2const, &model[3], &e[3], c2->xq_dec, WoE_index);
+	qt.decode_WoE(&c2.c2const, &model[3], &e[3], c2.xq_dec, WoE_index);
 
 	for(i=0; i<LSP_SCALAR_INDEXES; i++)
 	{
@@ -1074,9 +1028,9 @@ void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char
 	/* Wo and energy are sampled every 20ms, so we interpolate just 1
 	   10ms frame between 20ms samples */
 
-	interp_Wo(&model[0], &c2->prev_model_dec, &model[1], c2->c2const.Wo_min);
-	e[0] = interp_energy(c2->prev_e_dec, e[1]);
-	interp_Wo(&model[2], &model[1], &model[3], c2->c2const.Wo_min);
+	interp_Wo(&model[0], &c2.prev_model_dec, &model[1], c2.c2const.Wo_min);
+	e[0] = interp_energy(c2.prev_e_dec, e[1]);
+	interp_Wo(&model[2], &model[1], &model[3], c2.c2const.Wo_min);
 	e[2] = interp_energy(e[1], e[3]);
 
 	/* LSPs are sampled every 40ms so we interpolate the 3 frames in
@@ -1084,22 +1038,22 @@ void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char
 
 	for(i=0, weight=0.25; i<3; i++, weight += 0.25)
 	{
-		interpolate_lsp_ver2(&lsps[i][0], c2->prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
+		interpolate_lsp_ver2(&lsps[i][0], c2.prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
 	}
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 	}
 
 	/* update memories for next frame ----------------------------*/
 
-	c2->prev_model_dec = model[3];
-	c2->prev_e_dec = e[3];
+	c2.prev_model_dec = model[3];
+	c2.prev_e_dec = e[3];
 	for(i=0; i<LPC_ORD; i++)
-		c2->prev_lsps_dec[i] = lsps[3][i];
+		c2.prev_lsps_dec[i] = lsps[3][i];
 
 }
 
@@ -1131,7 +1085,7 @@ void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1300(unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -1142,44 +1096,42 @@ void CCodec2::codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[
 	int     i;
 	unsigned int nbit = 0;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0',  ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0',  ((codec2_bits_per_frame() + 7) / 8));
 
 	/* frame 1: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, speech);
-	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2->gray);
+	analyse_one_frame(&model, speech);
+	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2.gray);
 
 	/* frame 2: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[c2->n_samp]);
-	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2->gray);
+	analyse_one_frame(&model, &speech[c2.n_samp]);
+	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2.gray);
 
 	/* frame 3: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[2*c2->n_samp]);
-	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2->gray);
+	analyse_one_frame(&model, &speech[2*c2.n_samp]);
+	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2.gray);
 
 	/* frame 4: - voicing, scalar Wo & E, scalar LSPs ------------------*/
 
-	analyse_one_frame(c2, &model, &speech[3*c2->n_samp]);
-	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2->gray);
+	analyse_one_frame(&model, &speech[3*c2.n_samp]);
+	qt.pack_natural_or_gray(bits, &nbit, model.voiced, 1, c2.gray);
 
-	Wo_index = qt.encode_Wo(&c2->c2const, model.Wo, WO_BITS);
-	qt.pack_natural_or_gray(bits, &nbit, Wo_index, WO_BITS, c2->gray);
+	Wo_index = qt.encode_Wo(&c2.c2const, model.Wo, WO_BITS);
+	qt.pack_natural_or_gray(bits, &nbit, Wo_index, WO_BITS, c2.gray);
 
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
 	e_index = qt.encode_energy(e, E_BITS);
-	qt.pack_natural_or_gray(bits, &nbit, e_index, E_BITS, c2->gray);
+	qt.pack_natural_or_gray(bits, &nbit, e_index, E_BITS, c2.gray);
 
 	qt.encode_lsps_scalar(lsp_indexes, lsps, LPC_ORD);
 	for(i=0; i<LSP_SCALAR_INDEXES; i++)
 	{
-		qt.pack_natural_or_gray(bits, &nbit, lsp_indexes[i], qt.lsp_bits(i), c2->gray);
+		qt.pack_natural_or_gray(bits, &nbit, lsp_indexes[i], qt.lsp_bits(i), c2.gray);
 	}
 
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -1193,7 +1145,7 @@ void CCodec2::codec2_encode_1300(CODEC2 *c2, unsigned char * bits, short speech[
 
 \*---------------------------------------------------------------------------*/
 static int frames;
-void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char * bits, float ber_est)
+void CCodec2::codec2_decode_1300(short speech[], const unsigned char * bits, float ber_est)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -1207,7 +1159,6 @@ void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char
 	float   weight;
 	std::complex<float>    Aw[FFT_ENC];
 
-	assert(c2 != NULL);
 	frames+= 4;
 	/* only need to zero these out due to (unused) snr calculation */
 
@@ -1220,22 +1171,22 @@ void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char
 	/* this will partially fill the model params for the 4 x 10ms
 	   frames */
 
-	model[0].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2->gray);
-	model[1].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2->gray);
-	model[2].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2->gray);
-	model[3].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2->gray);
+	model[0].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2.gray);
+	model[1].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2.gray);
+	model[2].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2.gray);
+	model[3].voiced = qt.unpack_natural_or_gray(bits, &nbit, 1, c2.gray);
 
-	Wo_index = qt.unpack_natural_or_gray(bits, &nbit, WO_BITS, c2->gray);
-	model[3].Wo = qt.decode_Wo(&c2->c2const, Wo_index, WO_BITS);
+	Wo_index = qt.unpack_natural_or_gray(bits, &nbit, WO_BITS, c2.gray);
+	model[3].Wo = qt.decode_Wo(&c2.c2const, Wo_index, WO_BITS);
 	model[3].L  = PI/model[3].Wo;
 
-	e_index = qt.unpack_natural_or_gray(bits, &nbit, E_BITS, c2->gray);
+	e_index = qt.unpack_natural_or_gray(bits, &nbit, E_BITS, c2.gray);
 	e[3] = qt.decode_energy(e_index, E_BITS);
 	//fprintf(stderr, "%d %f\n", e_index, e[3]);
 
 	for(i=0; i<LSP_SCALAR_INDEXES; i++)
 	{
-		lsp_indexes[i] = qt.unpack_natural_or_gray(bits, &nbit, qt.lsp_bits(i), c2->gray);
+		lsp_indexes[i] = qt.unpack_natural_or_gray(bits, &nbit, qt.lsp_bits(i), c2.gray);
 	}
 	qt.decode_lsps_scalar(&lsps[3][0], lsp_indexes, LPC_ORD);
 	qt.check_lsp_order(&lsps[3][0], LPC_ORD);
@@ -1256,9 +1207,9 @@ void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char
 
 	for(i=0, weight=0.25; i<3; i++, weight += 0.25)
 	{
-		interpolate_lsp_ver2(&lsps[i][0], c2->prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
-		interp_Wo2(&model[i], &c2->prev_model_dec, &model[3], weight, c2->c2const.Wo_min);
-		e[i] = interp_energy2(c2->prev_e_dec, e[3],weight);
+		interpolate_lsp_ver2(&lsps[i][0], c2.prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
+		interp_Wo2(&model[i], &c2.prev_model_dec, &model[3], weight, c2.c2const.Wo_min);
+		e[i] = interp_energy2(c2.prev_e_dec, e[3],weight);
 	}
 
 	/* then recover spectral amplitudes */
@@ -1266,21 +1217,21 @@ void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 
 		/* dump parameters for deep learning experiments */
 
-		if (c2->fmlfeat != NULL)
+		if (c2.fmlfeat != NULL)
 		{
 			/* 10 LSPs - energy - Wo - voicing flag - 10 LPCs */
-			fwrite(&lsps[i][0], LPC_ORD, sizeof(float), c2->fmlfeat);
-			fwrite(&e[i], 1, sizeof(float), c2->fmlfeat);
-			fwrite(&model[i].Wo, 1, sizeof(float), c2->fmlfeat);
+			fwrite(&lsps[i][0], LPC_ORD, sizeof(float), c2.fmlfeat);
+			fwrite(&e[i], 1, sizeof(float), c2.fmlfeat);
+			fwrite(&model[i].Wo, 1, sizeof(float), c2.fmlfeat);
 			float voiced_float = model[i].voiced;
-			fwrite(&voiced_float, 1, sizeof(float), c2->fmlfeat);
-			fwrite(&ak[i][1], LPC_ORD, sizeof(float), c2->fmlfeat);
+			fwrite(&voiced_float, 1, sizeof(float), c2.fmlfeat);
+			fwrite(&ak[i][1], LPC_ORD, sizeof(float), c2.fmlfeat);
 		}
 	}
 	/*
@@ -1298,10 +1249,10 @@ void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char
 
 	/* update memories for next frame ----------------------------*/
 
-	c2->prev_model_dec = model[3];
-	c2->prev_e_dec = e[3];
+	c2.prev_model_dec = model[3];
+	c2.prev_e_dec = e[3];
 	for(i=0; i<LPC_ORD; i++)
-		c2->prev_lsps_dec[i] = lsps[3][i];
+		c2.prev_lsps_dec[i] = lsps[3][i];
 
 }
 
@@ -1334,7 +1285,7 @@ void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1200(unsigned char * bits, short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -1347,38 +1298,36 @@ void CCodec2::codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[
 	int     spare = 0;
 	unsigned int nbit = 0;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0',  ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0',  ((codec2_bits_per_frame() + 7) / 8));
 
 	/* frame 1: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, speech);
+	analyse_one_frame(&model, speech);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* frame 2: - voicing, joint Wo & E -------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[c2->n_samp]);
+	analyse_one_frame(&model, &speech[c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* need to run this just to get LPC energy */
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
 
-	WoE_index = qt.encode_WoE(&model, e, c2->xq_enc);
+	WoE_index = qt.encode_WoE(&model, e, c2.xq_enc);
 	qt.pack(bits, &nbit, WoE_index, WO_E_BITS);
 
 	/* frame 3: - voicing ---------------------------------------------*/
 
-	analyse_one_frame(c2, &model, &speech[2*c2->n_samp]);
+	analyse_one_frame(&model, &speech[2*c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
 	/* frame 4: - voicing, joint Wo & E, scalar LSPs ------------------*/
 
-	analyse_one_frame(c2, &model, &speech[3*c2->n_samp]);
+	analyse_one_frame(&model, &speech[3*c2.n_samp]);
 	qt.pack(bits, &nbit, model.voiced, 1);
 
-	e = qt.speech_to_uq_lsps(lsps, ak, c2->Sn, c2->w, c2->m_pitch, LPC_ORD);
-	WoE_index = qt.encode_WoE(&model, e, c2->xq_enc);
+	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
+	WoE_index = qt.encode_WoE(&model, e, c2.xq_enc);
 	qt.pack(bits, &nbit, WoE_index, WO_E_BITS);
 
 	qt.encode_lsps_vq(lsp_indexes, lsps, lsps_, LPC_ORD);
@@ -1388,7 +1337,7 @@ void CCodec2::codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[
 	}
 	qt.pack(bits, &nbit, spare, 1);
 
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -1402,7 +1351,7 @@ void CCodec2::codec2_encode_1200(CODEC2 *c2, unsigned char * bits, short speech[
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_1200(short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     lsp_indexes[LPC_ORD];
@@ -1415,8 +1364,6 @@ void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char
 	unsigned int nbit = 0;
 	float   weight;
 	std::complex<float>    Aw[FFT_ENC];
-
-	assert(c2 != NULL);
 
 	/* only need to zero these out due to (unused) snr calculation */
 
@@ -1433,13 +1380,13 @@ void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char
 
 	model[1].voiced = qt.unpack(bits, &nbit, 1);
 	WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-	qt.decode_WoE(&c2->c2const, &model[1], &e[1], c2->xq_dec, WoE_index);
+	qt.decode_WoE(&c2.c2const, &model[1], &e[1], c2.xq_dec, WoE_index);
 
 	model[2].voiced = qt.unpack(bits, &nbit, 1);
 
 	model[3].voiced = qt.unpack(bits, &nbit, 1);
 	WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-	qt.decode_WoE(&c2->c2const, &model[3], &e[3], c2->xq_dec, WoE_index);
+	qt.decode_WoE(&c2.c2const, &model[3], &e[3], c2.xq_dec, WoE_index);
 
 	for(i=0; i<LSP_PRED_VQ_INDEXES; i++)
 	{
@@ -1454,9 +1401,9 @@ void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char
 	/* Wo and energy are sampled every 20ms, so we interpolate just 1
 	   10ms frame between 20ms samples */
 
-	interp_Wo(&model[0], &c2->prev_model_dec, &model[1], c2->c2const.Wo_min);
-	e[0] = interp_energy(c2->prev_e_dec, e[1]);
-	interp_Wo(&model[2], &model[1], &model[3], c2->c2const.Wo_min);
+	interp_Wo(&model[0], &c2.prev_model_dec, &model[1], c2.c2const.Wo_min);
+	e[0] = interp_energy(c2.prev_e_dec, e[1]);
+	interp_Wo(&model[2], &model[1], &model[3], c2.c2const.Wo_min);
 	e[2] = interp_energy(e[1], e[3]);
 
 	/* LSPs are sampled every 40ms so we interpolate the 3 frames in
@@ -1464,22 +1411,22 @@ void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char
 
 	for(i=0, weight=0.25; i<3; i++, weight += 0.25)
 	{
-		interpolate_lsp_ver2(&lsps[i][0], c2->prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
+		interpolate_lsp_ver2(&lsps[i][0], c2.prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
 	}
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 	}
 
 	/* update memories for next frame ----------------------------*/
 
-	c2->prev_model_dec = model[3];
-	c2->prev_e_dec = e[3];
+	c2.prev_model_dec = model[3];
+	c2.prev_e_dec = e[3];
 	for(i=0; i<LPC_ORD; i++)
-		c2->prev_lsps_dec[i] = lsps[3][i];
+		c2.prev_lsps_dec[i] = lsps[3][i];
 }
 
 
@@ -1515,45 +1462,43 @@ void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_700c(unsigned char * bits, short speech[])
 {
 	MODEL        model;
 	int          indexes[4], i, M=4;
 	unsigned int nbit = 0;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0',  ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0',  ((codec2_bits_per_frame() + 7) / 8));
 
 	for(i=0; i<M; i++)
 	{
-		analyse_one_frame(c2, &model, &speech[i*c2->n_samp]);
+		analyse_one_frame(&model, &speech[i*c2.n_samp]);
 	}
 
 	int K = 20;
 	float rate_K_vec[K], mean;
 	float rate_K_vec_no_mean[K], rate_K_vec_no_mean_[K];
 
-	na1.newamp1_model_to_indexes(&c2->c2const, indexes, &model, rate_K_vec, c2->rate_K_sample_freqs_kHz, K, &mean, rate_K_vec_no_mean, rate_K_vec_no_mean_, &c2->se, c2->eq, c2->eq_en);
-	c2->nse += K;
+	na1.newamp1_model_to_indexes(&c2.c2const, indexes, &model, rate_K_vec, c2.rate_K_sample_freqs_kHz, K, &mean, rate_K_vec_no_mean, rate_K_vec_no_mean_, &c2.se, c2.eq, c2.eq_en);
+	c2.nse += K;
 
 #ifndef CORTEX_M4
 	/* dump features for deep learning experiments */
-	if (c2->fmlfeat != NULL)
+	if (c2.fmlfeat != NULL)
 	{
-		fwrite(&mean, 1, sizeof(float), c2->fmlfeat);
-		fwrite(rate_K_vec_no_mean, K, sizeof(float), c2->fmlfeat);
-		fwrite(rate_K_vec_no_mean_, K, sizeof(float), c2->fmlfeat);
+		fwrite(&mean, 1, sizeof(float), c2.fmlfeat);
+		fwrite(rate_K_vec_no_mean, K, sizeof(float), c2.fmlfeat);
+		fwrite(rate_K_vec_no_mean_, K, sizeof(float), c2.fmlfeat);
 		MODEL model_;
 		memcpy(&model_, &model, sizeof(model));
 		float rate_K_vec_[K];
 		for(int k=0; k<K; k++)
 			rate_K_vec_[k] = rate_K_vec_no_mean_[k] + mean;
-		na1.resample_rate_L(&c2->c2const, &model_, rate_K_vec_, c2->rate_K_sample_freqs_kHz, K);
-		fwrite(&model_.A, MAX_AMP, sizeof(float), c2->fmlfeat);
+		na1.resample_rate_L(&c2.c2const, &model_, rate_K_vec_, c2.rate_K_sample_freqs_kHz, K);
+		fwrite(&model_.A, MAX_AMP, sizeof(float), c2.fmlfeat);
 	}
-	if (c2->fmlmodel != NULL)
-		fwrite(&model,sizeof(MODEL),1,c2->fmlmodel);
+	if (c2.fmlmodel != NULL)
+		fwrite(&model,sizeof(MODEL),1,c2.fmlmodel);
 #endif
 
 	qt.pack_natural_or_gray(bits, &nbit, indexes[0], 9, 0);
@@ -1561,7 +1506,7 @@ void CCodec2::codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[
 	qt.pack_natural_or_gray(bits, &nbit, indexes[2], 4, 0);
 	qt.pack_natural_or_gray(bits, &nbit, indexes[3], 6, 0);
 
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -1575,14 +1520,12 @@ void CCodec2::codec2_encode_700c(CODEC2 *c2, unsigned char * bits, short speech[
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_700c(short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     indexes[4];
 	int     i;
 	unsigned int nbit = 0;
-
-	assert(c2 != NULL);
 
 	/* unpack bits from channel ------------------------------------*/
 
@@ -1595,12 +1538,12 @@ void CCodec2::codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char
 	std::complex<float>  HH[M][MAX_AMP+1];
 	float interpolated_surface_[M][NEWAMP1_K];
 
-	na1.newamp1_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->rate_K_sample_freqs_kHz, NEWAMP1_K, &(c2->phase_fft_fwd_cfg), &(c2->phase_fft_inv_cfg), indexes, c2->user_rate_K_vec_no_mean_, c2->post_filter_en);
+	na1.newamp1_indexes_to_model(&c2.c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2.prev_rate_K_vec_, &c2.Wo_left, &c2.voicing_left, c2.rate_K_sample_freqs_kHz, NEWAMP1_K, &(c2.phase_fft_fwd_cfg), &(c2.phase_fft_inv_cfg), indexes, c2.user_rate_K_vec_no_mean_.data(), c2.post_filter_en);
 
 
 	for(i=0; i<M; i++)
 	{
-		if (c2->fmlfeat != NULL)
+		if (c2.fmlfeat != NULL)
 		{
 			/* We use standard nb_features=55 feature records for compatability with train_lpcnet.py */
 			float features[55] = {0};
@@ -1610,11 +1553,11 @@ void CCodec2::codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char
 			int pitch_index = 21 + 2.0*M_PI/model[i].Wo;
 			features[36] = 0.02*(pitch_index-100);
 			features[37] = model[i].voiced;
-			fwrite(features, 55, sizeof(float), c2->fmlfeat);
+			fwrite(features, 55, sizeof(float), c2.fmlfeat);
 		}
 
 		/* 700C is a little quieter so lets apply some experimentally derived audio gain */
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], &HH[i][0], 1.5);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], &HH[i][0], 1.5);
 	}
 }
 
@@ -1628,12 +1571,10 @@ void CCodec2::codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char
 
 \*---------------------------------------------------------------------------*/
 
-float CCodec2::codec2_energy_700c(CODEC2 *c2, const unsigned char * bits)
+float CCodec2::codec2_energy_700c(const unsigned char * bits)
 {
 	int     indexes[4];
 	unsigned int nbit = 0;
-
-	assert(c2 != NULL);
 
 	/* unpack bits from channel ------------------------------------*/
 
@@ -1650,12 +1591,10 @@ float CCodec2::codec2_energy_700c(CODEC2 *c2, const unsigned char * bits)
 	return exp10f(mean/10.0);
 }
 
-float CCodec2::codec2_energy_450(CODEC2 *c2, const unsigned char * bits)
+float CCodec2::codec2_energy_450(const unsigned char * bits)
 {
 	int     indexes[4];
 	unsigned int nbit = 0;
-
-	assert(c2 != NULL);
 
 	/* unpack bits from channel ------------------------------------*/
 
@@ -1682,19 +1621,18 @@ float CCodec2::codec2_energy_450(CODEC2 *c2, const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-float CCodec2::codec2_get_energy(CODEC2 *c2, const unsigned char *bits)
+float CCodec2::codec2_get_energy(const unsigned char *bits)
 {
-	assert(c2 != NULL);
 	assert(
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode)) ||
-		( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2.mode)) ||
+		( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2.mode))
 	);
 	MODEL model;
 	float xq_dec[2] = {};
@@ -1702,49 +1640,49 @@ float CCodec2::codec2_get_energy(CODEC2 *c2, const unsigned char *bits)
 	float e;
 	unsigned int nbit;
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2.mode))
 	{
 		nbit = 1 + 1 + WO_BITS;
 		e_index = qt.unpack(bits, &nbit, E_BITS);
 		e = qt.decode_energy(e_index, E_BITS);
 	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_2400, c2.mode))
 	{
 		nbit = 1 + 1;
 		WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-		qt.decode_WoE(&c2->c2const, &model, &e, xq_dec, WoE_index);
+		qt.decode_WoE(&c2.c2const, &model, &e, xq_dec, WoE_index);
 	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2.mode))
 	{
 		nbit = 1 + 1 + WO_BITS;
 		e_index = qt.unpack(bits, &nbit, E_BITS);
 		e = qt.decode_energy(e_index, E_BITS);
 	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1400, c2.mode))
 	{
 		nbit = 1 + 1;
 		WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-		qt.decode_WoE(&c2->c2const, &model, &e, xq_dec, WoE_index);
+		qt.decode_WoE(&c2.c2const, &model, &e, xq_dec, WoE_index);
 	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1300, c2.mode))
 	{
 		nbit = 1 + 1 + 1 + 1 + WO_BITS;
-		e_index = qt.unpack_natural_or_gray(bits, &nbit, E_BITS, c2->gray);
+		e_index = qt.unpack_natural_or_gray(bits, &nbit, E_BITS, c2.gray);
 		e = qt.decode_energy(e_index, E_BITS);
 	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1200, c2.mode))
 	{
 		nbit = 1 + 1;
 		WoE_index = qt.unpack(bits, &nbit, WO_E_BITS);
-		qt.decode_WoE(&c2->c2const, &model, &e, xq_dec, WoE_index);
+		qt.decode_WoE(&c2.c2const, &model, &e, xq_dec, WoE_index);
 	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2.mode))
 	{
-		e = codec2_energy_700c(c2, bits);
+		e = codec2_energy_700c(bits);
 	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode) ||  CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2.mode) ||  CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2.mode))
 	{
-		e = codec2_energy_450(c2, bits);
+		e = codec2_energy_450(bits);
 	}
 
 	return e;
@@ -1788,7 +1726,7 @@ float CCodec2::codec2_get_energy(CODEC2 *c2, const unsigned char *bits)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_450(unsigned char * bits, short speech[])
 {
 	MODEL        model;
 	int          indexes[4], i,h, M=4;
@@ -1797,18 +1735,16 @@ void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]
 	float energydelta[M];
 	int spectralCounter;
 
-	assert(c2 != NULL);
-
-	memset(bits, '\0',  ((codec2_bits_per_frame(c2) + 7) / 8));
+	memset(bits, '\0',  ((codec2_bits_per_frame() + 7) / 8));
 	for(i=0; i<M; i++)
 	{
-		analyse_one_frame(c2, &model, &speech[i*c2->n_samp]);
+		analyse_one_frame(&model, &speech[i*c2.n_samp]);
 		energydelta[i] = 0;
 		spectralCounter = 0;
 		for(h = 0; h<(model.L); h++)
 		{
 			//only detect above 300 Hz
-			if(h*model.Wo*(c2->c2const.Fs/2000.0)/M_PI > 0.3)
+			if(h*model.Wo*(c2.c2const.Fs/2000.0)/M_PI > 0.3)
 			{
 				energydelta[i] = energydelta[i] + 20.0*log10(model.A[10]+1E-16);
 				spectralCounter = spectralCounter+1;
@@ -1820,7 +1756,7 @@ void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]
 	//Constants for plosive Detection tdB = threshold; minPwr = from below this level plosives have to rise
 	float tdB = 15; //not fixed can be changed
 	float minPwr = 15; //not fixed can be changed
-	if((c2->energy_prev)<minPwr && energydelta[0]>((c2->energy_prev)+tdB))
+	if((c2.energy_prev)<minPwr && energydelta[0]>((c2.energy_prev)+tdB))
 	{
 
 		plosiv = 1;
@@ -1842,10 +1778,10 @@ void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]
 	}
 	if(plosiv != 0 && plosiv != 4)
 	{
-		analyse_one_frame(c2, &model, &speech[(plosiv-1)*c2->n_samp]);
+		analyse_one_frame(&model, &speech[(plosiv-1)*c2.n_samp]);
 	}
 
-	c2->energy_prev = energydelta[3];
+	c2.energy_prev = energydelta[3];
 
 
 	int K = 29;
@@ -1855,7 +1791,7 @@ void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]
 	{
 		plosiv = 1;
 	}
-	na2.newamp2_model_to_indexes(&c2->c2const, indexes, &model, rate_K_vec, c2->n2_rate_K_sample_freqs_kHz, K, &mean, rate_K_vec_no_mean, rate_K_vec_no_mean_, plosiv);
+	na2.newamp2_model_to_indexes(&c2.c2const, indexes, &model, rate_K_vec, c2.n2_rate_K_sample_freqs_kHz, K, &mean, rate_K_vec_no_mean, rate_K_vec_no_mean_, plosiv);
 
 
 	qt.pack_natural_or_gray(bits, &nbit, indexes[0], 9, 0);
@@ -1863,7 +1799,7 @@ void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]
 	qt.pack_natural_or_gray(bits, &nbit, indexes[2], 3, 0);
 	qt.pack_natural_or_gray(bits, &nbit, indexes[3], 6, 0);
 
-	assert(nbit == (unsigned)codec2_bits_per_frame(c2));
+	assert(nbit == (unsigned)codec2_bits_per_frame());
 }
 
 
@@ -1876,14 +1812,12 @@ void CCodec2::codec2_encode_450(CODEC2 *c2, unsigned char * bits, short speech[]
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_450(short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     indexes[4];
 	int     i;
 	unsigned int nbit = 0;
-
-	assert(c2 != NULL);
 
 	/* unpack bits from channel ------------------------------------*/
 
@@ -1897,12 +1831,12 @@ void CCodec2::codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char 
 	float interpolated_surface_[M][NEWAMP2_K];
 	int pwbFlag = 0;
 
-	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_rate_K_sample_freqs_kHz, NEWAMP2_K, &(c2->phase_fft_fwd_cfg), &(c2->phase_fft_inv_cfg), indexes, 1.5, pwbFlag);
+	na2.newamp2_indexes_to_model(&c2.c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2.n2_prev_rate_K_vec_, &c2.Wo_left, &c2.voicing_left, c2.n2_rate_K_sample_freqs_kHz, NEWAMP2_K, &(c2.phase_fft_fwd_cfg), &(c2.phase_fft_inv_cfg), indexes, 1.5, pwbFlag);
 
 
 	for(i=0; i<M; i++)
 	{
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], &HH[i][0], 1.5);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], &HH[i][0], 1.5);
 	}
 }
 
@@ -1917,14 +1851,12 @@ void CCodec2::codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char 
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned char * bits)
+void CCodec2::codec2_decode_450pwb(short speech[], const unsigned char * bits)
 {
 	MODEL   model[4];
 	int     indexes[4];
 	int     i;
 	unsigned int nbit = 0;
-
-	assert(c2 != NULL);
 
 	/* unpack bits from channel ------------------------------------*/
 
@@ -1938,12 +1870,12 @@ void CCodec2::codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned ch
 	float interpolated_surface_[M][NEWAMP2_16K_K];
 	int pwbFlag = 1;
 
-	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_pwb_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K, &(c2->phase_fft_fwd_cfg), &(c2->phase_fft_inv_cfg), indexes, 1.5, pwbFlag);
+	na2.newamp2_indexes_to_model(&c2.c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2.n2_pwb_prev_rate_K_vec_, &c2.Wo_left, &c2.voicing_left, c2.n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K, &(c2.phase_fft_fwd_cfg), &(c2.phase_fft_inv_cfg), indexes, 1.5, pwbFlag);
 
 
 	for(i=0; i<M; i++)
 	{
-		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], &HH[i][0], 1.5);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], &HH[i][0], 1.5);
 	}
 }
 
@@ -1958,42 +1890,42 @@ void CCodec2::codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned ch
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std::complex<float> Aw[], float gain)
+void CCodec2::synthesise_one_frame(short speech[], MODEL *model, std::complex<float> Aw[], float gain)
 {
 	int     i;
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode) || CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode) || CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode)  )
+	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2.mode) || CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2.mode) || CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2.mode)  )
 	{
 		/* newamp1/2, we've already worked out rate L phase */
 		std::complex<float> *H = Aw;
-		phase_synth_zero_order(c2->n_samp, model, &c2->ex_phase, H);
+		phase_synth_zero_order(c2.n_samp, model, &c2.ex_phase, H);
 	}
 	else
 	{
 		/* LPC based phase synthesis */
 		std::complex<float> H[MAX_AMP+1];
 		sample_phase(model, H, Aw);
-		phase_synth_zero_order(c2->n_samp, model, &c2->ex_phase, H);
+		phase_synth_zero_order(c2.n_samp, model, &c2.ex_phase, H);
 	}
 
-	postfilter(model, &c2->bg_est);
-	synthesise(c2->n_samp, &(c2->fftr_inv_cfg), c2->Sn_, model, c2->Pn, 1);
+	postfilter(model, &c2.bg_est);
+	synthesise(c2.n_samp, &(c2.fftr_inv_cfg), c2.Sn_.data(), model, c2.Pn.data(), 1);
 
-	for(i=0; i<c2->n_samp; i++)
+	for(i=0; i<c2.n_samp; i++)
 	{
-		c2->Sn_[i] *= gain;
+		c2.Sn_[i] *= gain;
 	}
 
-	ear_protection(c2->Sn_, c2->n_samp);
+	ear_protection(c2.Sn_.data(), c2.n_samp);
 
-	for(i=0; i<c2->n_samp; i++)
+	for(i=0; i<c2.n_samp; i++)
 	{
-		if (c2->Sn_[i] > 32767.0)
+		if (c2.Sn_[i] > 32767.0)
 			speech[i] = 32767;
-		else if (c2->Sn_[i] < -32767.0)
+		else if (c2.Sn_[i] < -32767.0)
 			speech[i] = -32767;
 		else
-			speech[i] = c2->Sn_[i];
+			speech[i] = c2.Sn_[i];
 	}
 
 }
@@ -2010,37 +1942,37 @@ void CCodec2::synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::analyse_one_frame(CODEC2 *c2, MODEL *model, short speech[])
+void CCodec2::analyse_one_frame(MODEL *model, short speech[])
 {
 	std::complex<float>    Sw[FFT_ENC];
 	float   pitch;
 	int     i;
-	int     n_samp = c2->n_samp;
-	int     m_pitch = c2->m_pitch;
+	int     n_samp = c2.n_samp;
+	int     m_pitch = c2.m_pitch;
 
 	/* Read input speech */
 
 	for(i=0; i<m_pitch-n_samp; i++)
-		c2->Sn[i] = c2->Sn[i+n_samp];
+		c2.Sn[i] = c2.Sn[i+n_samp];
 	for(i=0; i<n_samp; i++)
-		c2->Sn[i+m_pitch-n_samp] = speech[i];
+		c2.Sn[i+m_pitch-n_samp] = speech[i];
 
-	dft_speech(&c2->c2const, c2->fft_fwd_cfg, Sw, c2->Sn, c2->w);
+	dft_speech(&c2.c2const, c2.fft_fwd_cfg, Sw, c2.Sn.data(), c2.w.data());
 
 	/* Estimate pitch */
-	nlp.nlp(c2->Sn, n_samp, &pitch, Sw, c2->W, &c2->prev_f0_enc);
+	nlp.nlp(c2.Sn.data(), n_samp, &pitch, Sw, c2.W, &c2.prev_f0_enc);
 	model->Wo = TWO_PI/pitch;
 	model->L = PI/model->Wo;
 
 	/* estimate model parameters */
-	two_stage_pitch_refinement(&c2->c2const, model, Sw);
+	two_stage_pitch_refinement(&c2.c2const, model, Sw);
 
 	/* estimate phases when doing ML experiments */
-	if (c2->fmlfeat != NULL)
-		estimate_amplitudes(model, Sw, c2->W, 1);
+	if (c2.fmlfeat != NULL)
+		estimate_amplitudes(model, Sw, c2.W, 1);
 	else
-		estimate_amplitudes(model, Sw, c2->W, 0);
-	est_voicing_mbe(&c2->c2const, model, Sw, c2->W);
+		estimate_amplitudes(model, Sw, c2.W, 0);
+	est_voicing_mbe(&c2.c2const, model, Sw, c2.W);
 #ifdef DUMP
 	dump_model(model);
 #endif
@@ -2088,14 +2020,14 @@ void CCodec2::ear_protection(float in_out[], int n)
 }
 
 
-void CCodec2::codec2_set_lpc_post_filter(CODEC2 *c2, int enable, int bass_boost, float beta, float gamma)
+void CCodec2::codec2_set_lpc_post_filter(int enable, int bass_boost, float beta, float gamma)
 {
 	assert((beta >= 0.0) && (beta <= 1.0));
 	assert((gamma >= 0.0) && (gamma <= 1.0));
-	c2->lpc_pf = enable;
-	c2->bass_boost = bass_boost;
-	c2->beta = beta;
-	c2->gamma = gamma;
+	c2.lpc_pf = enable;
+	c2.bass_boost = bass_boost;
+	c2.beta = beta;
+	c2.gamma = gamma;
 }
 
 
@@ -2105,11 +2037,9 @@ void CCodec2::codec2_set_lpc_post_filter(CODEC2 *c2, int enable, int bass_boost,
    Experimental method of sending voice/data frames for freeDV.
 */
 
-int CCodec2::codec2_get_spare_bit_index(CODEC2 *c2)
+int CCodec2::codec2_get_spare_bit_index()
 {
-	assert(c2 != NULL);
-
-	switch(c2->mode)
+	switch(c2.mode)
 	{
 	case CODEC2_MODE_1300:
 		return 2; // bit 2 (3th bit) is v2 (third voicing bit)
@@ -2130,15 +2060,13 @@ int CCodec2::codec2_get_spare_bit_index(CODEC2 *c2)
    for convenience.
 */
 
-int CCodec2::codec2_rebuild_spare_bit(CODEC2 *c2, char unpacked_bits[])
+int CCodec2::codec2_rebuild_spare_bit(char unpacked_bits[])
 {
 	int v1,v3;
 
-	assert(c2 != NULL);
-
 	v1 = unpacked_bits[1];
 
-	switch(c2->mode)
+	switch(c2.mode)
 	{
 	case CODEC2_MODE_1300:
 
@@ -2179,28 +2107,26 @@ int CCodec2::codec2_rebuild_spare_bit(CODEC2 *c2, char unpacked_bits[])
 	return -1;
 }
 
-void CCodec2::codec2_set_natural_or_gray(CODEC2 *c2, int gray)
+void CCodec2::codec2_set_natural_or_gray(int gray)
 {
-	assert(c2 != NULL);
-	c2->gray = gray;
+	c2.gray = gray;
 }
 
-void CCodec2::codec2_set_softdec(CODEC2 *c2, float *softdec)
+void CCodec2::codec2_set_softdec(float *softdec)
 {
-	assert(c2 != NULL);
-	c2->softdec = softdec;
+	c2.softdec = softdec;
 }
 
-void CCodec2::codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_fn, char *model_fn)
+void CCodec2::codec2_open_mlfeat(char *feat_fn, char *model_fn)
 {
-	if ((codec2_state->fmlfeat = fopen(feat_fn, "wb")) == NULL)
+	if ((c2.fmlfeat = fopen(feat_fn, "wb")) == NULL)
 	{
 		fprintf(stderr, "error opening machine learning feature file: %s\n", feat_fn);
 		exit(1);
 	}
 	if (model_fn)
 	{
-		if ((codec2_state->fmlmodel = fopen(model_fn, "wb")) == NULL)
+		if ((c2.fmlmodel = fopen(model_fn, "wb")) == NULL)
 		{
 			fprintf(stderr, "error opening machine learning Codec 2 model file: %s\n", feat_fn);
 			exit(1);
@@ -2208,7 +2134,7 @@ void CCodec2::codec2_open_mlfeat(CODEC2 *codec2_state, char *feat_fn, char *mode
 	}
 }
 
-void CCodec2::codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename)
+void CCodec2::codec2_load_codebook(int num, char *filename)
 {
 	FILE *f;
 
@@ -2228,31 +2154,31 @@ void CCodec2::codec2_load_codebook(CODEC2 *codec2_state, int num, char *filename
 	fclose(f);
 }
 
-float CCodec2::codec2_get_var(CODEC2 *codec2_state)
+float CCodec2::codec2_get_var()
 {
-	if (codec2_state->nse)
-		return codec2_state->se/codec2_state->nse;
+	if (c2.nse)
+		return c2.se/c2.nse;
 	else
 		return 0;
 }
 
-float *CCodec2::codec2_enable_user_ratek(CODEC2 *codec2_state, int *K)
+float *CCodec2::codec2_enable_user_ratek(int *K)
 {
-	codec2_state->user_rate_K_vec_no_mean_ = (float*)malloc(sizeof(float)*NEWAMP1_K);
+	c2.user_rate_K_vec_no_mean_.resize(NEWAMP1_K);
 	*K = NEWAMP1_K;
-	return codec2_state->user_rate_K_vec_no_mean_;
+	return c2.user_rate_K_vec_no_mean_.data();
 }
 
-void CCodec2::codec2_700c_post_filter(CODEC2 *codec2_state, int en)
+void CCodec2::codec2_700c_post_filter(int en)
 {
-	codec2_state->post_filter_en = en;
+	c2.post_filter_en = en;
 }
 
-void CCodec2::codec2_700c_eq(CODEC2 *codec2_state, int en)
+void CCodec2::codec2_700c_eq(int en)
 {
-	codec2_state->eq_en = en;
-	codec2_state->se = 0.0;
-	codec2_state->nse = 0;
+	c2.eq_en = en;
+	c2.se = 0.0;
+	c2.nse = 0;
 }
 /*---------------------------------------------------------------------------*\
 

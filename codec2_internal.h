@@ -41,16 +41,16 @@ using CODEC2 = struct codec2_tag {
 	int              m_pitch;
 	FFT_STATE  fft_fwd_cfg;              /* forward FFT config                        */
 	FFTR_STATE fftr_fwd_cfg;             /* forward real FFT config                   */
-	float           *w;	                       /* [m_pitch] time domain hamming window      */
+	std::vector<float> w;	                       /* [m_pitch] time domain hamming window      */
 	float            W[FFT_ENC];	           /* DFT of w[]                                */
-	float           *Pn;	                   /* [2*n_samp] trapezoidal synthesis window   */
-	float           *bpf_buf;                  /* buffer for band pass filter               */
-	float           *Sn;                       /* [m_pitch] input speech                    */
+	std::vector<float> Pn;	                   /* [2*n_samp] trapezoidal synthesis window   */
+	std::vector<float> bpf_buf;                  /* buffer for band pass filter               */
+	std::vector<float> Sn;                       /* [m_pitch] input speech                    */
 	float            hpf_states[2];            /* high pass filter states                   */
 	int              gray;                     /* non-zero for gray encoding                */
 
 	FFTR_STATE fftr_inv_cfg;             /* inverse FFT config                        */
-	float           *Sn_;	                   /* [2*n_samp] synthesised output speech      */
+	std::vector<float> Sn_;	                   /* [2*n_samp] synthesised output speech      */
 	float            ex_phase;                 /* excitation model phase track              */
 	float            bg_est;                   /* background noise estimate for post filter */
 	float            prev_f0_enc;              /* previous frame's f0    estimate           */
@@ -79,7 +79,7 @@ using CODEC2 = struct codec2_tag {
 	FFT_STATE  phase_fft_inv_cfg;
 	float            se;                       /* running sum of squared error */
 	unsigned int     nse;                      /* number of terms in sum       */
-	float           *user_rate_K_vec_no_mean_; /* optional, user supplied vector for quantisation experiments */
+	std::vector<float> user_rate_K_vec_no_mean_; /* optional, user supplied vector for quantisation experiments */
 	int              post_filter_en;
 	float            eq[NEWAMP1_K];            /* optional equaliser */
 	int              eq_en;

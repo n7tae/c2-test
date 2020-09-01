@@ -97,9 +97,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	auto codec2 = cc2.codec2_create(mode);
-	auto nsam = cc2.codec2_samples_per_frame(codec2);
-	auto nbit = cc2.codec2_bits_per_frame(codec2);
+	if (cc2.codec2_create(mode))
+		return 1;
+	auto nsam = cc2.codec2_samples_per_frame();
+	auto nbit = cc2.codec2_bits_per_frame();
 	buf = (short*)malloc(nsam*sizeof(short));
 	auto nbyte = (nbit + 7) / 8;
 
@@ -127,12 +128,12 @@ int main(int argc, char *argv[])
 		if (strcmp(argv[i], "--mlfeat") == 0)
 		{
 			/* dump machine learning features (700C only) */
-			cc2.codec2_open_mlfeat(codec2, argv[i+1], argv[i+2]);
+			cc2.codec2_open_mlfeat(argv[i+1], argv[i+2]);
 		}
 		if (strcmp(argv[i], "--loadcb") == 0)
 		{
 			/* load VQ stage (700C only) */
-			cc2.codec2_load_codebook(codec2, atoi(argv[i+1])-1, argv[i+2]);
+			cc2.codec2_load_codebook(atoi(argv[i+1])-1, argv[i+2]);
 		}
 		if (strcmp(argv[i], "--var") == 0)
 		{
@@ -144,15 +145,15 @@ int main(int argc, char *argv[])
 		}
 
 	}
-	cc2.codec2_set_natural_or_gray(codec2, gray);
-	cc2.codec2_700c_eq(codec2, eq);
+	cc2.codec2_set_natural_or_gray(gray);
+	cc2.codec2_700c_eq(eq);
 
 	//fprintf(stderr,"gray: %d softdec: %d\n", gray, softdec);
 
 	while(fread(buf, sizeof(short), nsam, fin) == (size_t)nsam)
 	{
 
-		cc2.codec2_encode(codec2, bits, buf);
+		cc2.codec2_encode(bits, buf);
 
 		if (softdec || bitperchar)
 		{
@@ -192,10 +193,10 @@ int main(int argc, char *argv[])
 
 	if (report_var)
 	{
-		float var = cc2.codec2_get_var(codec2);
+		float var = cc2.codec2_get_var();
 		fprintf(stderr, "%s var: %5.2f std: %5.2f\n", argv[2], var, sqrt(var));
 	}
-	cc2.codec2_destroy(codec2);
+	cc2.codec2_destroy();
 
 	free(buf);
 	free(bits);
