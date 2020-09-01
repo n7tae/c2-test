@@ -125,7 +125,7 @@ void CNewamp2::n2_rate_K_mbest_encode(int *indexes, float *x, float *xq, int ndi
 {
 	int i, n1;
 	const float *codebook1 = newamp2vq_cb[0].cb;
-	MBEST *mbest_stage1;
+	MBEST mbest_stage1;
 	float w[ndim];
 	int   index[1];
 
@@ -138,14 +138,14 @@ void CNewamp2::n2_rate_K_mbest_encode(int *indexes, float *x, float *xq, int ndi
 	for(i=0; i<ndim; i++)
 		w[i] = 1.0;
 
-	mbest_stage1 = mbest_create(1);
+	mbest_create(mbest_stage1, 1);
 
 	index[0] = 0;
 
 	/* Stage 1 */
 
-	mbest_search450(codebook1, x, w, ndim,NEWAMP2_K, newamp2vq_cb[0].m, mbest_stage1, index);
-	n1 = mbest_stage1->list[0].index[0];
+	mbest_search450(codebook1, x, w, ndim,NEWAMP2_K, newamp2vq_cb[0].m, &mbest_stage1, index);
+	n1 = mbest_stage1.list[0].index[0];
 
 	mbest_destroy(mbest_stage1);
 
@@ -581,6 +581,6 @@ void CNewamp2::mbest_search450(const float *cb, float vec[], float w[], int k,in
 			}
 		}
 		index[0] = j;
-		mbest_insert(mbest, index, e);
+		mbest_insert(*mbest, index, e);
 	}
 }

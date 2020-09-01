@@ -309,34 +309,25 @@ void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples i
 	}
 }
 
-MBEST *CNewampbase::mbest_create(int entries)
+void CNewampbase::mbest_create(MBEST &mbest, const int entries)
 {
-	MBEST *mbest;
-
 	assert(entries > 0);
-	mbest = (MBEST *)malloc(sizeof(MBEST));
-	assert(mbest != NULL);
 
-	mbest->entries = entries;
-	mbest->list = (MBEST_LIST *)malloc(entries*sizeof(MBEST_LIST));
-	assert(mbest->list != NULL);
+	mbest.entries = entries;
+	mbest.list.resize(entries);
 
-	for(int i=0; i<mbest->entries; i++)
+	for(int i=0; i<entries; i++)
 	{
 		for(int j=0; j<MBEST_STAGES; j++)
-			mbest->list[i].index[j] = 0;
-		mbest->list[i].error = 1E32;
+			mbest.list[i].index[j] = 0;
+		mbest.list[i].error = 1.0E32f;
 	}
-
-	return mbest;
 }
 
 
-void CNewampbase::mbest_destroy(MBEST *mbest)
+void CNewampbase::mbest_destroy(MBEST &mbest)
 {
-	assert(mbest != NULL);
-	free(mbest->list);
-	free(mbest);
+	mbest.list.clear();
 }
 
 
@@ -350,32 +341,31 @@ void CNewampbase::mbest_destroy(MBEST *mbest)
 
 \*---------------------------------------------------------------------------*/
 
-void CNewampbase::mbest_insert(MBEST *mbest, int index[], float error)
+void CNewampbase::mbest_insert(MBEST &mbest, int index[], float error)
 {
-	MBEST_LIST *list    = mbest->list;
-	int         entries = mbest->entries;
+	const int entries = mbest.entries;
 
 	bool found = false;
 	for(int i=0; i<entries && !found; i++)
-		if (error < list[i].error)
+		if (error < mbest.list[i].error)
 		{
 			found = true;
 			for(int j=entries-1; j>i; j--)
-				list[j] = list[j-1];
+				mbest.list[j] = mbest.list[j-1];
 			for(int j=0; j<MBEST_STAGES; j++)
-				list[i].index[j] = index[j];
-			list[i].error = error;
+				mbest.list[i].index[j] = index[j];
+			mbest.list[i].error = error;
 		}
 }
 
 
-void CNewampbase::mbest_print(char title[], MBEST *mbest)
+void CNewampbase::mbest_print(const char *title, const MBEST &mbest) const
 {
 	fprintf(stderr, "%s\n", title);
-	for(int i=0; i<mbest->entries; i++)
+	for(int i=0; i<mbest.entries; i++)
 	{
 		for(int j=0; j<MBEST_STAGES; j++)
-			fprintf(stderr, "  %4d ", mbest->list[i].index[j]);
-		fprintf(stderr, " %f\n", mbest->list[i].error);
+			fprintf(stderr, "  %4d ", mbest.list[i].index[j]);
+		fprintf(stderr, " %f\n", mbest.list[i].error);
 	}
 }

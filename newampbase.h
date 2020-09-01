@@ -2,19 +2,23 @@
 #define NEWQMPBASE_H
 
 #include <complex>
+#include <vector>
+
 #include "qbase.h"
 #include "kiss_fft.h"
 
 #define MBEST_STAGES 4
 
-using MBEST_LIST = struct mbest_list_tag {
+using MBEST_LIST = struct mbest_list_tag
+{
     int   index[MBEST_STAGES];    /* index of each stage that lead us to this error */
     float error;
 };
 
-using MBEST = struct mbest_tag {
+using MBEST = struct mbest_tag
+{
     int         entries;   /* number of entries in mbest list   */
-    MBEST_LIST *list;
+    std::vector<MBEST_LIST> list;
 };
 
 class CNewampbase : public CQbase
@@ -27,10 +31,10 @@ protected:
 	void determine_phase(C2CONST *c2const, std::complex<float> H[], MODEL *model, int Nfft, FFT_STATE *fwd_cfg, FFT_STATE *inv_cfg);
 
 	// Multistage vector quantiser search algorithm that keeps multiple candidates from each stage.
-	MBEST *mbest_create(int entries);
-	void mbest_destroy(MBEST *mbest);
-	void mbest_insert(MBEST *mbest, int index[], float error);
-	void mbest_print(char title[], MBEST *mbest);
+	void mbest_create(MBEST &mbest, const int entries);
+	void mbest_destroy(MBEST &mbest);
+	void mbest_insert(MBEST &best, int index[], float error);
+	void mbest_print(const char *title, const MBEST &mbest) const;
 
 private:
 	void mag_to_phase(float phase[], float Gdbfk[], int Nfft, FFT_STATE *fwd_cfg, FFT_STATE *inv_cfg);
