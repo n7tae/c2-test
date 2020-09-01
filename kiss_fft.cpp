@@ -18,7 +18,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "defines.h"
 #include "kiss_fft.h"
 
-void CKissFFT::kf_bfly2(std::complex<float> *Fout, const size_t fstride, kiss_fft_state *st, int m)
+void CKissFFT::kf_bfly2(std::complex<float> *Fout, const size_t fstride, FFT_STATE *st, int m)
 {
 	std::complex<float> *Fout2;
 	std::complex<float> *tw1 = st->twiddles;
@@ -36,7 +36,7 @@ void CKissFFT::kf_bfly2(std::complex<float> *Fout, const size_t fstride, kiss_ff
 	while (--m);
 }
 
-void CKissFFT::kf_bfly3(std::complex<float> * Fout, const size_t fstride, kiss_fft_state *st, int m)
+void CKissFFT::kf_bfly3(std::complex<float> * Fout, const size_t fstride, FFT_STATE *st, int m)
 {
 	const size_t m2 = 2 * m;
 	std::complex<float> *tw1,*tw2;
@@ -73,7 +73,7 @@ void CKissFFT::kf_bfly3(std::complex<float> * Fout, const size_t fstride, kiss_f
 	while(--m);
 }
 
-void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, kiss_fft_state *st, int m)
+void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, FFT_STATE *st, int m)
 {
 	std::complex<float> *tw1,*tw2,*tw3;
 	std::complex<float> scratch[6];
@@ -119,7 +119,7 @@ void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, kiss_ff
 	while(--k);
 }
 
-void CKissFFT::kf_bfly5(std::complex<float> * Fout, const size_t fstride, kiss_fft_state *st, int m)
+void CKissFFT::kf_bfly5(std::complex<float> * Fout, const size_t fstride, FFT_STATE *st, int m)
 {
 	std::complex<float> *Fout0,*Fout1,*Fout2,*Fout3,*Fout4;
 	int u;
@@ -177,7 +177,7 @@ void CKissFFT::kf_bfly5(std::complex<float> * Fout, const size_t fstride, kiss_f
 }
 
 /* perform the butterfly for one stage of a mixed radix FFT */
-void CKissFFT::kf_bfly_generic(std::complex<float> *Fout, const size_t fstride, kiss_fft_state *st, int m, int p)
+void CKissFFT::kf_bfly_generic(std::complex<float> *Fout, const size_t fstride, FFT_STATE *st, int m, int p)
 {
 	int u,k,q1,q;
 	std::complex<float> *twiddles = st->twiddles;
@@ -213,7 +213,7 @@ void CKissFFT::kf_bfly_generic(std::complex<float> *Fout, const size_t fstride, 
 	free(scratch);
 }
 
-void CKissFFT::kf_work(std::complex<float> *Fout, const std::complex<float> *f, const size_t fstride, int in_stride, int *factors, kiss_fft_state *st)
+void CKissFFT::kf_work(std::complex<float> *Fout, const std::complex<float> *f, const size_t fstride, int in_stride, int *factors, FFT_STATE *st)
 {
 	std::complex<float> * Fout_beg=Fout;
 	const int p=*factors++; /* the radix  */
@@ -310,19 +310,19 @@ void CKissFFT::kf_factor(int n,int * facbuf)
  * The return value is a contiguous block of memory, allocated with malloc.  As such,
  * It can be freed with free(), rather than a kiss_fft-specific function.
  * */
-kiss_fft_state *CKissFFT::fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
+FFT_STATE *CKissFFT::fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
 {
-	kiss_fft_state *st = NULL;
-	size_t memneeded = sizeof(struct kiss_fft_state) + sizeof(std::complex<float>)*(nfft-1); /* twiddle factors*/
+	FFT_STATE *st = NULL;
+	size_t memneeded = sizeof(struct FFT_STATE) + sizeof(std::complex<float>)*(nfft-1); /* twiddle factors*/
 
 	if ( lenmem==NULL )
 	{
-		st = ( kiss_fft_state *)malloc(memneeded);
+		st = ( FFT_STATE *)malloc(memneeded);
 	}
 	else
 	{
 		if (mem != NULL && *lenmem >= memneeded)
-			st = (kiss_fft_state *)mem;
+			st = (FFT_STATE *)mem;
 		*lenmem = memneeded;
 	}
 	if (st)
@@ -346,7 +346,7 @@ kiss_fft_state *CKissFFT::fft_alloc(int nfft, int inverse_fft, void *mem, size_t
 }
 
 
-void CKissFFT::fft_stride(kiss_fft_state *st, const std::complex<float> *fin, std::complex<float> *fout, int in_stride)
+void CKissFFT::fft_stride(FFT_STATE *st, const std::complex<float> *fin, std::complex<float> *fout, int in_stride)
 {
 	if (fin == fout)
 	{
@@ -363,7 +363,7 @@ void CKissFFT::fft_stride(kiss_fft_state *st, const std::complex<float> *fin, st
 	}
 }
 
-void CKissFFT::fft(kiss_fft_state *cfg, const std::complex<float> *fin, std::complex<float> *fout)
+void CKissFFT::fft(FFT_STATE *cfg, const std::complex<float> *fin, std::complex<float> *fout)
 {
 	fft_stride(cfg, fin, fout, 1);
 }
@@ -383,10 +383,10 @@ int CKissFFT::fft_next_fast_size(int n)
 	return n;
 }
 
-kiss_fftr_state *CKissFFT::fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *lenmem)
+FFTR_STATE *CKissFFT::fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *lenmem)
 {
 	int i;
-	kiss_fftr_state *st = NULL;
+	FFTR_STATE *st = NULL;
 	size_t subsize, memneeded;
 
 	if (nfft & 1)
@@ -397,22 +397,22 @@ kiss_fftr_state *CKissFFT::fftr_alloc(int nfft, int inverse_fft, void * mem, siz
 	nfft >>= 1;
 
 	fft_alloc(nfft, inverse_fft, NULL, &subsize);
-	memneeded = sizeof(struct kiss_fftr_state) + subsize + sizeof(std::complex<float>) * ( nfft * 3 / 2);
+	memneeded = sizeof(struct FFTR_STATE) + subsize + sizeof(std::complex<float>) * ( nfft * 3 / 2);
 
 	if (lenmem == NULL)
 	{
-		st = (kiss_fftr_state *)malloc(memneeded);
+		st = (FFTR_STATE *)malloc(memneeded);
 	}
 	else
 	{
 		if (*lenmem >= memneeded)
-			st = (kiss_fftr_state *)mem;
+			st = (FFTR_STATE *)mem;
 		*lenmem = memneeded;
 	}
 	if (!st)
 		return NULL;
 
-	st->substate = (kiss_fft_state *)(st + 1); /*just beyond kiss_fftr_state struct */
+	st->substate = (FFT_STATE *)(st + 1); /*just beyond FFTR_STATE struct */
 	st->tmpbuf = (std::complex<float> *) (((char *) st->substate) + subsize);
 	st->super_twiddles = st->tmpbuf + nfft;
 	fft_alloc(nfft, inverse_fft, st->substate, &subsize);
@@ -428,7 +428,7 @@ kiss_fftr_state *CKissFFT::fftr_alloc(int nfft, int inverse_fft, void * mem, siz
 	return st;
 }
 
-void CKissFFT::fftr(kiss_fftr_state *st, const float *timedata, std::complex<float> *freqdata)
+void CKissFFT::fftr(FFTR_STATE *st, const float *timedata, std::complex<float> *freqdata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k,ncfft;
@@ -471,7 +471,7 @@ void CKissFFT::fftr(kiss_fftr_state *st, const float *timedata, std::complex<flo
 	}
 }
 
-void CKissFFT::fftri(kiss_fftr_state *st, const std::complex<float> *freqdata, float *timedata)
+void CKissFFT::fftri(FFTR_STATE *st, const std::complex<float> *freqdata, float *timedata)
 {
 	/* input buffer timedata is stored row-wise */
 	int k, ncfft;

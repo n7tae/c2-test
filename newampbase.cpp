@@ -206,7 +206,7 @@ void CNewampbase::interp_Wo_v(float Wo_[], int L_[], int voicing_[], float Wo1, 
 
 \*---------------------------------------------------------------------------*/
 
-void CNewampbase::determine_phase(C2CONST *c2const, std::complex<float> H[], MODEL *model, int Nfft, kiss_fft_state *fwd_cfg, kiss_fft_state *inv_cfg)
+void CNewampbase::determine_phase(C2CONST *c2const, std::complex<float> H[], MODEL *model, int Nfft, FFT_STATE *fwd_cfg, FFT_STATE *inv_cfg)
 {
 	int i,m,b;
 	int Ns = Nfft/2+1;
@@ -252,8 +252,8 @@ void CNewampbase::determine_phase(C2CONST *c2const, std::complex<float> H[], MOD
 void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples in radians       */
 				  float Gdbfk[],              /* Nfft/2+1 postive freq amplitudes samples in dB */
 				  int Nfft,
-				  kiss_fft_state *fft_fwd_cfg,
-				  kiss_fft_state *fft_inv_cfg
+				  FFT_STATE *fft_fwd_cfg,
+				  FFT_STATE *fft_inv_cfg
 				 )
 {
 	std::complex<float> Sdb[Nfft], c[Nfft], cf[Nfft], Cf[Nfft];

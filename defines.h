@@ -104,7 +104,7 @@ struct lsp_codebook
 	float *cb; /* The elements         */
 };
 
-struct kiss_fft_state
+struct FFT_STATE
 {
     int nfft;
     int inverse;
@@ -112,9 +112,9 @@ struct kiss_fft_state
     std::complex<float> twiddles[1];
 };
 
-struct kiss_fftr_state
+struct FFTR_STATE
 {
-	kiss_fft_state *substate;
+	FFT_STATE *substate;
 	std::complex<float> *tmpbuf;
 	std::complex<float> *super_twiddles;
 };

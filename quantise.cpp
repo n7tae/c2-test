@@ -242,7 +242,7 @@ void CQuantize::force_min_lsp_dist(float lsp[], int order)
 
 \*---------------------------------------------------------------------------*/
 
-void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E)
+void CQuantize::lpc_post_filter(FFTR_STATE *fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E)
 {
 	int   i;
 	float x[FFT_ENC];   /* input to FFTs                */
@@ -349,7 +349,7 @@ void CQuantize::lpc_post_filter(kiss_fftr_state *fftr_fwd_cfg, float Pw[], float
 \*---------------------------------------------------------------------------*/
 
 void CQuantize::aks_to_M2(
-	kiss_fftr_state * fftr_fwd_cfg,
+	FFTR_STATE * fftr_fwd_cfg,
 	float         ak[],	     /* LPC's */
 	int           order,
 	MODEL        *model,	   /* sinusoidal model parameters for this frame */

@@ -511,7 +511,7 @@ void Cnlp::fdmdv_16_to_8(float out8k[], float in16k[], int n)
 // not noticeable
 // the reduced usage of RAM and increased performance on STM32 platforms
 // should be worth it.
-void Cnlp::codec2_fft_inplace(kiss_fft_state *cfg, std::complex<float> *inout)
+void Cnlp::codec2_fft_inplace(FFT_STATE *cfg, std::complex<float> *inout)
 {
 	std::complex<float> in[512];
 	// decide whether to use the local stack based buffer for in

@@ -2585,7 +2585,7 @@ C2CONST CCodec2::c2const_create(int Fs, float framelength_s)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, float w[], float W[])
+void CCodec2::make_analysis_window(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, float w[], float W[])
 {
 	float m;
 	std::complex<float>  wshift[FFT_ENC];
@@ -2700,7 +2700,7 @@ void CCodec2::make_analysis_window(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::dft_speech(C2CONST *c2const, kiss_fft_state *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[])
+void CCodec2::dft_speech(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[])
 {
     int  i;
     int  m_pitch = c2const->m_pitch;
@@ -3048,7 +3048,7 @@ void CCodec2::make_synthesis_window(C2CONST *c2const, float Pn[])
 
 void CCodec2::synthesise(
 	int    n_samp,
-	kiss_fftr_state *fftr_inv_cfg,
+	FFTR_STATE *fftr_inv_cfg,
 	float  Sn_[],		/* time domain synthesised signal              */
 	MODEL *model,		/* ptr to model parameters for this frame      */
 	float  Pn[],		/* time domain Parzen window                   */
