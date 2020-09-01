@@ -29,6 +29,7 @@
 #define __DEFINES__
 
 #include <complex>
+#include <vector>
 
 /*---------------------------------------------------------------------------*\
 
@@ -104,19 +105,19 @@ struct lsp_codebook
 	float *cb; /* The elements         */
 };
 
-struct FFT_STATE
+using FFT_STATE = struct fft_state_tag
 {
-    int nfft;
-    int inverse;
-    int factors[2*MAXFACTORS];
-    std::complex<float> twiddles[1];
+    int  nfft;
+    bool inverse;
+    int  factors[2*MAXFACTORS];
+    std::vector<std::complex<float>> twiddles;
 };
 
-struct FFTR_STATE
+using FFTR_STATE = struct fftr_state_tag
 {
-	FFT_STATE *substate;
-	std::complex<float> *tmpbuf;
-	std::complex<float> *super_twiddles;
+	FFT_STATE substate;
+	std::vector<std::complex<float>> tmpbuf;
+	std::vector<std::complex<float>> super_twiddles;
 };
 
 extern const struct lsp_codebook lsp_cb[];

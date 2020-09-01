@@ -65,7 +65,7 @@ using NLP = struct nlp_tag
 	float         sq[PMAX_M];	     /* squared speech samples       */
 	float         mem_x,mem_y;       /* memory for notch filter      */
 	float         mem_fir[NLP_NTAP]; /* decimation FIR filter memory */
-	FFT_STATE *fft_cfg;         /* kiss FFT config              */
+	FFT_STATE     fft_cfg;           /* kiss FFT config              */
 	std::vector<float> Sn16k;	     /* Fs=16kHz input speech vector */
 };
 
@@ -75,7 +75,7 @@ public:
 	void nlp_create(C2CONST *c2const);
 	void nlp_destroy();
 	float nlp(float Sn[], int n, float *pitch_samples, std::complex<float> Sw[], float W[], float *prev_f0);
-	void codec2_fft_inplace(FFT_STATE *cfg, std::complex<float> *inout);
+	void codec2_fft_inplace(FFT_STATE &cfg, std::complex<float> *inout);
 
 private:
 	float post_process_sub_multiples(std::complex<float> Fw[], int pmin, int pmax, float gmax, int gmax_bin, float *prev_f0);

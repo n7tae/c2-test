@@ -18,10 +18,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "defines.h"
 #include "kiss_fft.h"
 
-void CKissFFT::kf_bfly2(std::complex<float> *Fout, const size_t fstride, FFT_STATE *st, int m)
+void CKissFFT::kf_bfly2(std::complex<float> *Fout, const size_t fstride, FFT_STATE &st, int m)
 {
 	std::complex<float> *Fout2;
-	std::complex<float> *tw1 = st->twiddles;
+	std::complex<float> *tw1 = st.twiddles.data();
 	std::complex<float> t;
 	Fout2 = Fout + m;
 	do
@@ -36,15 +36,15 @@ void CKissFFT::kf_bfly2(std::complex<float> *Fout, const size_t fstride, FFT_STA
 	while (--m);
 }
 
-void CKissFFT::kf_bfly3(std::complex<float> * Fout, const size_t fstride, FFT_STATE *st, int m)
+void CKissFFT::kf_bfly3(std::complex<float> * Fout, const size_t fstride, FFT_STATE &st, int m)
 {
 	const size_t m2 = 2 * m;
 	std::complex<float> *tw1,*tw2;
 	std::complex<float> scratch[5];
 	std::complex<float> epi3;
-	epi3 = st->twiddles[fstride*m];
+	epi3 = st.twiddles[fstride*m];
 
-	tw1 = tw2 = st->twiddles;
+	tw1 = tw2 = st.twiddles.data();
 
 	do
 	{
@@ -73,7 +73,7 @@ void CKissFFT::kf_bfly3(std::complex<float> * Fout, const size_t fstride, FFT_ST
 	while(--m);
 }
 
-void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, FFT_STATE *st, int m)
+void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, FFT_STATE &st, int m)
 {
 	std::complex<float> *tw1,*tw2,*tw3;
 	std::complex<float> scratch[6];
@@ -82,7 +82,7 @@ void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, FFT_STA
 	const int m3 = 3 * m;
 
 
-	tw3 = tw2 = tw1 = st->twiddles;
+	tw3 = tw2 = tw1 = st.twiddles.data();
 
 	do
 	{
@@ -100,7 +100,7 @@ void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, FFT_STA
 		tw3 += fstride*3;
 		*Fout += scratch[3];
 
-		if(st->inverse)
+		if(st.inverse)
 		{
 			Fout[m].real(scratch[5].real() - scratch[4].imag());
 			Fout[m].imag(scratch[5].imag() + scratch[4].real());
@@ -119,25 +119,21 @@ void CKissFFT::kf_bfly4(std::complex<float> *Fout, const size_t fstride, FFT_STA
 	while(--k);
 }
 
-void CKissFFT::kf_bfly5(std::complex<float> * Fout, const size_t fstride, FFT_STATE *st, int m)
+void CKissFFT::kf_bfly5(std::complex<float> * Fout, const size_t fstride, FFT_STATE &st, int m)
 {
-	std::complex<float> *Fout0,*Fout1,*Fout2,*Fout3,*Fout4;
-	int u;
 	std::complex<float> scratch[13];
-	std::complex<float> * twiddles = st->twiddles;
-	std::complex<float> *tw;
-	std::complex<float> ya,yb;
-	ya = twiddles[fstride*m];
-	yb = twiddles[fstride*2*m];
+	std::complex<float> *twiddles = st.twiddles.data();
+	auto ya = twiddles[fstride*m];
+	auto yb = twiddles[fstride*2*m];
 
-	Fout0=Fout;
-	Fout1=Fout0+m;
-	Fout2=Fout0+2*m;
-	Fout3=Fout0+3*m;
-	Fout4=Fout0+4*m;
+	auto Fout0 = Fout;
+	auto Fout1 = Fout0 + m;
+	auto Fout2 = Fout0 + 2 * m;
+	auto Fout3 = Fout0 + 3 * m;
+	auto Fout4 = Fout0 + 4 * m;
 
-	tw=st->twiddles;
-	for ( u=0; u<m; ++u )
+	auto tw = st.twiddles.data();
+	for (int u=0; u<m; ++u)
 	{
 		scratch[0] = *Fout0;
 
@@ -177,48 +173,47 @@ void CKissFFT::kf_bfly5(std::complex<float> * Fout, const size_t fstride, FFT_ST
 }
 
 /* perform the butterfly for one stage of a mixed radix FFT */
-void CKissFFT::kf_bfly_generic(std::complex<float> *Fout, const size_t fstride, FFT_STATE *st, int m, int p)
+void CKissFFT::kf_bfly_generic(std::complex<float> *Fout, const size_t fstride, FFT_STATE &st, int m, int p)
 {
-	int u,k,q1,q;
-	std::complex<float> *twiddles = st->twiddles;
+	auto twiddles = st.twiddles.data();
 	std::complex<float> t;
-	int Norig = st->nfft;
+	int Norig = st.nfft;
 
-	std::complex<float> * scratch = (std::complex<float>*)malloc(sizeof(std::complex<float>)*p);
+	std::vector<std::complex<float>> scratch(p);
 
-	for ( u=0; u<m; ++u )
+	for (int u=0; u<m; ++u)
 	{
-		k=u;
-		for ( q1=0 ; q1<p ; ++q1 )
+		int k = u;
+		for (int q1=0 ; q1<p ; ++q1)
 		{
-			scratch[q1] = Fout[ k  ];
+			scratch[q1] = Fout[k];
 			k += m;
 		}
 
-		k=u;
-		for ( q1=0 ; q1<p ; ++q1 )
+		k = u;
+		for (int q1=0 ; q1<p ; ++q1)
 		{
-			int twidx=0;
-			Fout[ k ] = scratch[0];
-			for (q=1; q<p; ++q )
+			int twidx = 0;
+			Fout[k] = scratch[0];
+			for (int q=1; q<p; ++q)
 			{
 				twidx += fstride * k;
-				if (twidx>=Norig) twidx-=Norig;
+				if (twidx >= Norig) twidx-=Norig;
 				t = scratch[q] * twiddles[twidx];
 				Fout[k] += t;
 			}
 			k += m;
 		}
 	}
-	free(scratch);
+	scratch.clear();
 }
 
-void CKissFFT::kf_work(std::complex<float> *Fout, const std::complex<float> *f, const size_t fstride, int in_stride, int *factors, FFT_STATE *st)
+void CKissFFT::kf_work(std::complex<float> *Fout, const std::complex<float> *f, const size_t fstride, int in_stride, int *factors, FFT_STATE &st)
 {
-	std::complex<float> * Fout_beg=Fout;
-	const int p=*factors++; /* the radix  */
-	const int m=*factors++; /* stage's fft length/p */
-	const std::complex<float> * Fout_end = Fout + p*m;
+	auto Fout_beg = Fout;
+	const int p = *factors++; /* the radix  */
+	const int m = *factors++; /* stage's fft length/p */
+	const std::complex<float> *Fout_end = Fout + p*m;
 
 	if (m==1)
 	{
@@ -237,7 +232,7 @@ void CKissFFT::kf_work(std::complex<float> *Fout, const std::complex<float> *f, 
 			// DFT of size m*p performed by doing
 			// p instances of smaller DFTs of size m,
 			// each one takes a decimated version of the input
-			kf_work( Fout, f, fstride*p, in_stride, factors,st);
+			kf_work( Fout, f, fstride*p, in_stride, factors, st);
 			f += fstride*in_stride;
 		}
 		while( (Fout += m) != Fout_end );
@@ -303,67 +298,44 @@ void CKissFFT::kf_factor(int n,int * facbuf)
 	while (n > 1);
 }
 
-/*
- *
- * User-callable function to allocate all necessary storage space for the fft.
- *
- * The return value is a contiguous block of memory, allocated with malloc.  As such,
- * It can be freed with free(), rather than a kiss_fft-specific function.
- * */
-FFT_STATE *CKissFFT::fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
+void CKissFFT::fft_alloc(FFT_STATE &state, const int nfft, bool inverse_fft)
 {
-	FFT_STATE *st = NULL;
-	size_t memneeded = sizeof(struct FFT_STATE) + sizeof(std::complex<float>)*(nfft-1); /* twiddle factors*/
+	state.twiddles.resize(nfft);
 
-	if ( lenmem==NULL )
-	{
-		st = ( FFT_STATE *)malloc(memneeded);
-	}
-	else
-	{
-		if (mem != NULL && *lenmem >= memneeded)
-			st = (FFT_STATE *)mem;
-		*lenmem = memneeded;
-	}
-	if (st)
-	{
-		int i;
-		st->nfft=nfft;
-		st->inverse = inverse_fft;
+	state.nfft = nfft;
+	state.inverse = inverse_fft;
 
-		for (i=0; i<nfft; ++i)
-		{
-			const double pi=3.141592653589793238462643383279502884197169399375105820974944;
-			double phase = -2*pi*i / nfft;
-			if (st->inverse)
-				phase *= -1;
-			st->twiddles[i] = std::polar(1.0f, float(phase));
-		}
-
-		kf_factor(nfft,st->factors);
+	for (int i=0; i<nfft; ++i)
+	{
+		const double pi=3.141592653589793238462643383279502884197169399375105820974944;
+		double phase = -2.0 * pi * i / nfft;
+		if (state.inverse)
+			phase *= -1.0;
+		state.twiddles[i] = std::polar(1.0f, float(phase));
 	}
-	return st;
+
+	kf_factor(nfft, state.factors);
 }
 
 
-void CKissFFT::fft_stride(FFT_STATE *st, const std::complex<float> *fin, std::complex<float> *fout, int in_stride)
+void CKissFFT::fft_stride(FFT_STATE &st, const std::complex<float> *fin, std::complex<float> *fout, int in_stride)
 {
 	if (fin == fout)
 	{
 		//NOTE: this is not really an in-place FFT algorithm.
 		//It just performs an out-of-place FFT into a temp buffer
-		std::complex<float> *tmpbuf = (std::complex<float>*)malloc(sizeof(std::complex<float>)*st->nfft);
-		kf_work(tmpbuf,fin,1,in_stride, st->factors,st);
-		memcpy(fout, tmpbuf, sizeof(std::complex<float>)*st->nfft);
-		free(tmpbuf);
+		std::vector<std::complex<float>> tmpbuf(st.nfft);
+		kf_work(tmpbuf.data(), fin, true, in_stride, st.factors, st);
+		memcpy(fout, tmpbuf.data(), sizeof(std::complex<float>)*st.nfft);
+		tmpbuf.clear();
 	}
 	else
 	{
-		kf_work( fout, fin, 1, in_stride, st->factors,st );
+		kf_work(fout, fin, 1, in_stride, st.factors, st);
 	}
 }
 
-void CKissFFT::fft(FFT_STATE *cfg, const std::complex<float> *fin, std::complex<float> *fout)
+void CKissFFT::fft(FFT_STATE &cfg, const std::complex<float> *fin, std::complex<float> *fout)
 {
 	fft_stride(cfg, fin, fout, 1);
 }
@@ -372,74 +344,42 @@ int CKissFFT::fft_next_fast_size(int n)
 {
 	while(1)
 	{
-		int m=n;
-		while ( (m%2) == 0 ) m/=2;
-		while ( (m%3) == 0 ) m/=3;
-		while ( (m%5) == 0 ) m/=5;
-		if (m<=1)
+		int m = n;
+		while ( (m % 2) == 0 ) m /= 2;
+		while ( (m % 3) == 0 ) m /= 3;
+		while ( (m % 5) == 0 ) m /= 5;
+		if (m <= 1)
 			break; /* n is completely factorable by twos, threes, and fives */
 		n++;
 	}
 	return n;
 }
 
-FFTR_STATE *CKissFFT::fftr_alloc(int nfft, int inverse_fft, void * mem, size_t *lenmem)
+void CKissFFT::fftr_alloc(FFTR_STATE &st, int nfft, const bool inverse_fft)
 {
-	int i;
-	FFTR_STATE *st = NULL;
-	size_t subsize, memneeded;
-
-	if (nfft & 1)
-	{
-		fprintf(stderr,"Real FFT optimization must be even.\n");
-		return NULL;
-	}
 	nfft >>= 1;
 
-	fft_alloc(nfft, inverse_fft, NULL, &subsize);
-	memneeded = sizeof(struct FFTR_STATE) + subsize + sizeof(std::complex<float>) * ( nfft * 3 / 2);
+	fft_alloc(st.substate, nfft, inverse_fft);
+	st.tmpbuf.resize(nfft);
+	st.super_twiddles.resize(nfft);
 
-	if (lenmem == NULL)
+	for (int i=0; i<nfft/2; ++i)
 	{
-		st = (FFTR_STATE *)malloc(memneeded);
-	}
-	else
-	{
-		if (*lenmem >= memneeded)
-			st = (FFTR_STATE *)mem;
-		*lenmem = memneeded;
-	}
-	if (!st)
-		return NULL;
-
-	st->substate = (FFT_STATE *)(st + 1); /*just beyond FFTR_STATE struct */
-	st->tmpbuf = (std::complex<float> *) (((char *) st->substate) + subsize);
-	st->super_twiddles = st->tmpbuf + nfft;
-	fft_alloc(nfft, inverse_fft, st->substate, &subsize);
-
-	for (i = 0; i < nfft/2; ++i)
-	{
-		float phase =
-			-3.14159265358979323846264338327 * ((float) (i+1) / nfft + .5);
+		double phase = -3.141592653589793238462643383279502884197169399375105820974944 * (double(i+1) / nfft + .5);
 		if (inverse_fft)
-			phase *= -1;
-		st->super_twiddles[i] = std::polar(1.0f, phase);
+			phase *= -1.0;
+		st.super_twiddles[i] = std::polar(1.0f, float(phase));
 	}
-	return st;
 }
 
-void CKissFFT::fftr(FFTR_STATE *st, const float *timedata, std::complex<float> *freqdata)
+void CKissFFT::fftr(FFTR_STATE &st, const float *timedata, std::complex<float> *freqdata)
 {
-	/* input buffer timedata is stored row-wise */
-	int k,ncfft;
-	std::complex<float> fpnk,fpk,f1k,f2k,tw,tdc;
+	assert(st.substate.inverse == false);
 
-	assert(st->substate->inverse==0);
-
-	ncfft = st->substate->nfft;
+	auto ncfft = st.substate.nfft;
 
 	/*perform the parallel fft of two real signals packed in real,imag*/
-	fft( st->substate, (const std::complex<float>*)timedata, st->tmpbuf );
+	fft( st.substate, (const std::complex<float>*)timedata, st.tmpbuf.data());
 	/* The real part of the DC element of the frequency spectrum in st->tmpbuf
 	 * contains the sum of the even-numbered elements of the input time sequence
 	 * The imag part is the sum of the odd-numbered elements
@@ -450,20 +390,20 @@ void CKissFFT::fftr(FFTR_STATE *st, const float *timedata, std::complex<float> *
 	 *      yielding Nyquist bin of input time sequence
 	 */
 
-	tdc = st->tmpbuf[0];
+	auto tdc = st.tmpbuf[0];
 	freqdata[0].real(tdc.real() + tdc.imag());
 	freqdata[ncfft].real(tdc.real() - tdc.imag());
 	freqdata[ncfft].imag(0.f);
 	freqdata[0].imag(0.f);
 
-	for ( k=1; k <= ncfft/2 ; ++k )
+	for (int  k=1; k <= ncfft/2; ++k)
 	{
-		fpk = st->tmpbuf[k];
-		fpnk = std::conj(st->tmpbuf[ncfft-k]);
+		auto fpk = st.tmpbuf[k];
+		auto fpnk = std::conj(st.tmpbuf[ncfft-k]);
 
-		f1k = fpk + fpnk;
-		f2k = fpk - fpnk;
-		tw = f2k * st->super_twiddles[k-1];
+		auto f1k = fpk + fpnk;
+		auto f2k = fpk - fpnk;
+		auto tw = f2k * st.super_twiddles[k-1];
 
 		freqdata[k] = 0.5f * (f1k + tw);
 		freqdata[ncfft-k].real(0.5f * (f1k.real() - tw.real()));
@@ -471,29 +411,25 @@ void CKissFFT::fftr(FFTR_STATE *st, const float *timedata, std::complex<float> *
 	}
 }
 
-void CKissFFT::fftri(FFTR_STATE *st, const std::complex<float> *freqdata, float *timedata)
+void CKissFFT::fftri(FFTR_STATE &st, const std::complex<float> *freqdata, float *timedata)
 {
-	/* input buffer timedata is stored row-wise */
-	int k, ncfft;
+	assert(st.substate.inverse == true);
 
-	assert(st->substate->inverse == 1);
+	auto ncfft = st.substate.nfft;
 
-	ncfft = st->substate->nfft;
+	st.tmpbuf[0].real(freqdata[0].real() + freqdata[ncfft].real());
+	st.tmpbuf[0].imag(freqdata[0].real() - freqdata[ncfft].real());
 
-	st->tmpbuf[0].real(freqdata[0].real() + freqdata[ncfft].real());
-	st->tmpbuf[0].imag(freqdata[0].real() - freqdata[ncfft].real());
-
-	for (k = 1; k <= ncfft / 2; ++k)
+	for (int k=1; k <= ncfft/2; ++k)
 	{
-		std::complex<float> fk, fnkc, fek, fok, tmp;
-		fk = freqdata[k];
-		fnkc = std::conj(freqdata[ncfft - k]);
+		auto fk = freqdata[k];
+		auto fnkc = std::conj(freqdata[ncfft - k]);
 
-		fek = fk + fnkc;
-		tmp = fk - fnkc;
-		fok = tmp * st->super_twiddles[k-1];
-		st->tmpbuf[k] = fek + fok;
-		st->tmpbuf[ncfft - k] = std::conj(fek - fok);
+		auto fek = fk + fnkc;
+		auto tmp = fk - fnkc;
+		auto fok = tmp * st.super_twiddles[k-1];
+		st.tmpbuf[k] = fek + fok;
+		st.tmpbuf[ncfft - k] = std::conj(fek - fok);
 	}
-	fft (st->substate, st->tmpbuf, (std::complex<float> *) timedata);
+	fft (st.substate, st.tmpbuf.data(), (std::complex<float> *)timedata);
 }

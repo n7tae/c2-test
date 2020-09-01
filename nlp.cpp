@@ -195,8 +195,7 @@ void Cnlp::nlp_create(C2CONST *c2const)
 	for(i=0; i<NLP_NTAP; i++)
 		snlp.mem_fir[i] = 0.0;
 
-	snlp.fft_cfg = kiss.fft_alloc(PE_FFT_SIZE, 0, NULL, NULL);
-	assert(snlp.fft_cfg != NULL);
+	kiss.fft_alloc(snlp.fft_cfg, PE_FFT_SIZE, false);
 }
 
 /*---------------------------------------------------------------------------*\
@@ -209,7 +208,7 @@ void Cnlp::nlp_create(C2CONST *c2const)
 
 void Cnlp::nlp_destroy()
 {
-	free(snlp.fft_cfg);
+	snlp.fft_cfg.twiddles.clear();
 }
 
 /*---------------------------------------------------------------------------*\
@@ -511,16 +510,16 @@ void Cnlp::fdmdv_16_to_8(float out8k[], float in16k[], int n)
 // not noticeable
 // the reduced usage of RAM and increased performance on STM32 platforms
 // should be worth it.
-void Cnlp::codec2_fft_inplace(FFT_STATE *cfg, std::complex<float> *inout)
+void Cnlp::codec2_fft_inplace(FFT_STATE &cfg, std::complex<float> *inout)
 {
 	std::complex<float> in[512];
 	// decide whether to use the local stack based buffer for in
 	// or to allow kiss_fft to allocate RAM
 	// second part is just to play safe since first method
 	// is much faster and uses less RAM
-	if (cfg->nfft <= 512)
+	if (cfg.nfft <= 512)
 	{
-		memcpy(in, inout, cfg->nfft*sizeof(std::complex<float>));
+		memcpy(in, inout, cfg.nfft*sizeof(std::complex<float>));
 		kiss.fft(cfg, in, inout);
 	}
 	else

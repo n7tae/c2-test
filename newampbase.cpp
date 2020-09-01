@@ -272,7 +272,7 @@ void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples i
 
 	/* compute real cepstrum from log magnitude spectrum */
 
-	kiss.fft(fft_inv_cfg, Sdb, c);
+	kiss.fft(*fft_inv_cfg, Sdb, c);
 	for(i=0; i<Nfft; i++)
 	{
 		c[i] /= (float)Nfft;
@@ -295,7 +295,7 @@ void CNewampbase::mag_to_phase(float phase[], /* Nfft/2+1 output phase samples i
 
 	/* Cf = dB_magnitude + j * minimum_phase */
 
-	kiss.fft(fft_fwd_cfg, cf, Cf);
+	kiss.fft(*fft_fwd_cfg, cf, Cf);
 
 	/*  The maths says we are meant to be using log(x), not 20*log10(x),
 	    so we need to scale the phase to account for this:

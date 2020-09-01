@@ -150,11 +150,11 @@ CODEC2 *CCodec2::codec2_create(int mode)
 	codec2.hpf_states[0] = codec2.hpf_states[1] = 0.0;
 	for(i=0; i<2*n_samp; i++)
 		codec2.Sn_[i] = 0;
-	codec2.fft_fwd_cfg = kiss.fft_alloc(FFT_ENC, 0, NULL, NULL);
-	codec2.fftr_fwd_cfg = kiss.fftr_alloc(FFT_ENC, 0, NULL, NULL);
-	make_analysis_window(&codec2.c2const, codec2.fft_fwd_cfg, codec2.w,codec2.W);
+	kiss.fft_alloc(codec2.fft_fwd_cfg, FFT_ENC, false);
+	kiss.fftr_alloc(codec2.fftr_fwd_cfg, FFT_ENC, false);
+	make_analysis_window(&codec2.c2const, &codec2.fft_fwd_cfg, codec2.w,codec2.W);
 	make_synthesis_window(&codec2.c2const, codec2.Pn);
-	codec2.fftr_inv_cfg = kiss.fftr_alloc(FFT_DEC, 1, NULL, NULL);
+	kiss.fftr_alloc(codec2.fftr_inv_cfg, FFT_DEC, true);
 	codec2.prev_f0_enc = 1/P_MAX_S;
 	codec2.bg_est = 0.0;
 	codec2.ex_phase = 0.0;
@@ -200,17 +200,16 @@ CODEC2 *CCodec2::codec2_create(int mode)
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, codec2.mode))
 	{
 		na1.mel_sample_freqs_kHz(codec2.rate_K_sample_freqs_kHz, NEWAMP1_K, na1.ftomel(200.0), na1.ftomel(3700.0) );
-		int k;
-		for(k=0; k<NEWAMP1_K; k++)
+		for(int k=0; k<NEWAMP1_K; k++)
 		{
 			codec2.prev_rate_K_vec_[k] = 0.0;
 			codec2.eq[k] = 0.0;
 		}
 		codec2.eq_en = 0;
 		codec2.Wo_left = 0.0;
-		codec2.voicing_left = 0;;
-		codec2.phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 0, NULL, NULL);
-		codec2.phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP1_PHASE_NFFT, 1, NULL, NULL);
+		codec2.voicing_left = 0;
+		kiss.fft_alloc(codec2.phase_fft_fwd_cfg, NEWAMP1_PHASE_NFFT, false);
+		kiss.fft_alloc(codec2.phase_fft_inv_cfg, NEWAMP1_PHASE_NFFT, true);
 	}
 
 	/* newamp2 initialisation */
@@ -218,30 +217,28 @@ CODEC2 *CCodec2::codec2_create(int mode)
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, codec2.mode))
 	{
 		na2.n2_mel_sample_freqs_kHz(codec2.n2_rate_K_sample_freqs_kHz, NEWAMP2_K);
-		int k;
-		for(k=0; k<NEWAMP2_K; k++)
+		for(int k=0; k<NEWAMP2_K; k++)
 		{
 			codec2.n2_prev_rate_K_vec_[k] = 0.0;
 		}
 		codec2.Wo_left = 0.0;
-		codec2.voicing_left = 0;;
-		codec2.phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		codec2.phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		codec2.voicing_left = 0;
+		kiss.fft_alloc(codec2.phase_fft_fwd_cfg, NEWAMP2_PHASE_NFFT, false);
+		kiss.fft_alloc(codec2.phase_fft_inv_cfg, NEWAMP2_PHASE_NFFT, true);
 	}
 	/* newamp2 PWB initialisation */
 
 	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, codec2.mode))
 	{
 		na2.n2_mel_sample_freqs_kHz(codec2.n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K);
-		int k;
-		for(k=0; k<NEWAMP2_16K_K; k++)
+		for(int k=0; k<NEWAMP2_16K_K; k++)
 		{
 			codec2.n2_pwb_prev_rate_K_vec_[k] = 0.0;
 		}
 		codec2.Wo_left = 0.0;
-		codec2.voicing_left = 0;;
-		codec2.phase_fft_fwd_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 0, NULL, NULL);
-		codec2.phase_fft_inv_cfg = kiss.fft_alloc(NEWAMP2_PHASE_NFFT, 1, NULL, NULL);
+		codec2.voicing_left = 0;
+		kiss.fft_alloc(codec2.phase_fft_fwd_cfg, NEWAMP2_PHASE_NFFT, false);
+		kiss.fft_alloc(codec2.phase_fft_inv_cfg, NEWAMP2_PHASE_NFFT, true);
 	}
 
 	codec2.fmlfeat = NULL;
@@ -328,24 +325,15 @@ void CCodec2::codec2_destroy(CODEC2 *c2)
 	assert(c2 != NULL);
 	free(c2->bpf_buf);
 	nlp.nlp_destroy();
-	free(c2->fft_fwd_cfg);
-	free(c2->fftr_fwd_cfg);
-	free(c2->fftr_inv_cfg);
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_700C, c2->mode))
-	{
-		free(c2->phase_fft_fwd_cfg);
-		free(c2->phase_fft_inv_cfg);
-	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450, c2->mode))
-	{
-		free(c2->phase_fft_fwd_cfg);
-		free(c2->phase_fft_inv_cfg);
-	}
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_450PWB, c2->mode))
-	{
-		free(c2->phase_fft_fwd_cfg);
-		free(c2->phase_fft_inv_cfg);
-	}
+	c2->fft_fwd_cfg.twiddles.clear();
+	c2->fftr_fwd_cfg.substate.twiddles.clear();
+	c2->fftr_fwd_cfg.tmpbuf.clear();
+	c2->fftr_fwd_cfg.super_twiddles.clear();
+	c2->fftr_inv_cfg.substate.twiddles.clear();
+	c2->fftr_inv_cfg.tmpbuf.clear();
+	c2->fftr_inv_cfg.super_twiddles.clear();
+	c2->phase_fft_fwd_cfg.twiddles.clear();
+	c2->phase_fft_inv_cfg.twiddles.clear();
 	free(c2->Pn);
 	free(c2->Sn);
 	free(c2->w);
@@ -583,7 +571,7 @@ void CCodec2::codec2_decode_3200(CODEC2 *c2, short speech[], const unsigned char
 	for(i=0; i<2; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(c2->fftr_fwd_cfg, &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
 	}
@@ -728,7 +716,7 @@ void CCodec2::codec2_decode_2400(CODEC2 *c2, short speech[], const unsigned char
 	for(i=0; i<2; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(c2->fftr_fwd_cfg, &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
 
@@ -928,7 +916,7 @@ void CCodec2::codec2_decode_1600(CODEC2 *c2, short speech[], const unsigned char
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(c2->fftr_fwd_cfg, &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
 	}
@@ -1101,7 +1089,7 @@ void CCodec2::codec2_decode_1400(CODEC2 *c2, short speech[], const unsigned char
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(c2->fftr_fwd_cfg, &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
 	}
@@ -1278,7 +1266,7 @@ void CCodec2::codec2_decode_1300(CODEC2 *c2, short speech[], const unsigned char
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(c2->fftr_fwd_cfg, &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
 
@@ -1481,7 +1469,7 @@ void CCodec2::codec2_decode_1200(CODEC2 *c2, short speech[], const unsigned char
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(c2->fftr_fwd_cfg, &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
+		qt.aks_to_M2(&(c2->fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2->lpc_pf, c2->bass_boost, c2->beta, c2->gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(c2, &speech[c2->n_samp*i], &model[i], Aw, 1.0);
 	}
@@ -1607,7 +1595,7 @@ void CCodec2::codec2_decode_700c(CODEC2 *c2, short speech[], const unsigned char
 	std::complex<float>  HH[M][MAX_AMP+1];
 	float interpolated_surface_[M][NEWAMP1_K];
 
-	na1.newamp1_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->rate_K_sample_freqs_kHz, NEWAMP1_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, c2->user_rate_K_vec_no_mean_, c2->post_filter_en);
+	na1.newamp1_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->rate_K_sample_freqs_kHz, NEWAMP1_K, &(c2->phase_fft_fwd_cfg), &(c2->phase_fft_inv_cfg), indexes, c2->user_rate_K_vec_no_mean_, c2->post_filter_en);
 
 
 	for(i=0; i<M; i++)
@@ -1909,7 +1897,7 @@ void CCodec2::codec2_decode_450(CODEC2 *c2, short speech[], const unsigned char 
 	float interpolated_surface_[M][NEWAMP2_K];
 	int pwbFlag = 0;
 
-	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_rate_K_sample_freqs_kHz, NEWAMP2_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, 1.5, pwbFlag);
+	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_rate_K_sample_freqs_kHz, NEWAMP2_K, &(c2->phase_fft_fwd_cfg), &(c2->phase_fft_inv_cfg), indexes, 1.5, pwbFlag);
 
 
 	for(i=0; i<M; i++)
@@ -1950,7 +1938,7 @@ void CCodec2::codec2_decode_450pwb(CODEC2 *c2, short speech[], const unsigned ch
 	float interpolated_surface_[M][NEWAMP2_16K_K];
 	int pwbFlag = 1;
 
-	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_pwb_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K, c2->phase_fft_fwd_cfg, c2->phase_fft_inv_cfg, indexes, 1.5, pwbFlag);
+	na2.newamp2_indexes_to_model(&c2->c2const, model, (std::complex<float>*)HH, (float*)interpolated_surface_, c2->n2_pwb_prev_rate_K_vec_, &c2->Wo_left, &c2->voicing_left, c2->n2_pwb_rate_K_sample_freqs_kHz, NEWAMP2_16K_K, &(c2->phase_fft_fwd_cfg), &(c2->phase_fft_inv_cfg), indexes, 1.5, pwbFlag);
 
 
 	for(i=0; i<M; i++)
@@ -1989,7 +1977,7 @@ void CCodec2::synthesise_one_frame(CODEC2 *c2, short speech[], MODEL *model, std
 	}
 
 	postfilter(model, &c2->bg_est);
-	synthesise(c2->n_samp, c2->fftr_inv_cfg, c2->Sn_, model, c2->Pn, 1);
+	synthesise(c2->n_samp, &(c2->fftr_inv_cfg), c2->Sn_, model, c2->Pn, 1);
 
 	for(i=0; i<c2->n_samp; i++)
 	{
@@ -2656,7 +2644,7 @@ void CCodec2::make_analysis_window(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, flo
 	for(i=FFT_ENC-nw/2,j=m_pitch/2-nw/2; i<FFT_ENC; i++,j++)
 		wshift[i].real(w[j]);
 
-	kiss.fft(fft_fwd_cfg, wshift, temp);
+	kiss.fft(*fft_fwd_cfg, wshift, temp);
 
 	/*
 	    Re-arrange W[] to be symmetrical about FFT_ENC/2.  Makes later
@@ -2700,7 +2688,7 @@ void CCodec2::make_analysis_window(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, flo
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::dft_speech(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[])
+void CCodec2::dft_speech(C2CONST *c2const, FFT_STATE &fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[])
 {
     int  i;
     int  m_pitch = c2const->m_pitch;
@@ -3089,7 +3077,7 @@ void CCodec2::synthesise(
 
 	/* Perform inverse DFT */
 
-	kiss.fftri(fftr_inv_cfg, Sw_,sw_);
+	kiss.fftri(*fftr_inv_cfg, Sw_,sw_);
 
 	/* Overlap add to previous samples */
 

@@ -267,7 +267,7 @@ void CQuantize::lpc_post_filter(FFTR_STATE *fftr_fwd_cfg, float Pw[], float ak[]
 		x[i] = ak[i] * coeff;
 		coeff *= gamma;
 	}
-	kiss.fftr(fftr_fwd_cfg, x, Ww);
+	kiss.fftr(*fftr_fwd_cfg, x, Ww);
 
 	for(i=0; i<FFT_ENC/2; i++)
 	{
@@ -384,7 +384,7 @@ void CQuantize::aks_to_M2(
 
 		for(i=0; i<=order; i++)
 			a[i] = ak[i];
-		kiss.fftr(fftr_fwd_cfg, a, Aw);
+		kiss.fftr(*fftr_fwd_cfg, a, Aw);
 	}
 
 	/* Determine power spectrum P(w) = E/(A(exp(jw))^2 ------------------------*/

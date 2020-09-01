@@ -127,7 +127,7 @@ private:
 	C2CONST c2const_create(int Fs, float framelength_ms);
 
 	void make_analysis_window(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, float w[], float W[]);
-	void dft_speech(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[]);
+	void dft_speech(C2CONST *c2const, FFT_STATE &fft_fwd_cfg, std::complex<float> Sw[], float Sn[], float w[]);
 	void two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::complex<float> Sw[]);
 	void estimate_amplitudes(MODEL *model, std::complex<float> Sw[], float W[], int est_phase);
 	float est_voicing_mbe(C2CONST *c2const, MODEL *model, std::complex<float> Sw[], float W[]);

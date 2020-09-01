@@ -63,3 +63,4 @@ test : $(EXES)
 	./c2enc  450 test.raw test.0450.dat && ./c2dec  450 test.0450.dat - | aplay -f S16_LE
 	./c2dec 450PWB test.0450.dat - | aplay -r 16000 -f S16_LE
 	aplay -f S16_LE test.raw
+	ls -l *.dat test.raw
