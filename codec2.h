@@ -164,6 +164,7 @@ private:
 	void ear_protection(float in_out[], int n);
 	float codec2_energy_700c(const unsigned char * bits);
 	float codec2_energy_450(const unsigned char * bits);
+	void lsp_to_lpc(float *freq, float *ak, int lpcrdr);
 
 	void (CCodec2::*encode)(unsigned char * bits, short speech[]);
 	void (CCodec2::*decode)(short speech[], const unsigned char * bits);

@@ -35,7 +35,6 @@
 #include "dump.h"
 #include "quantise.h"
 #include "lpc.h"
-#include "lsp.h"
 #include "kiss_fft.h"
 
 extern CKissFFT kiss;
@@ -830,4 +829,187 @@ float CQuantize::decode_energy(int index, int bits)
 	e    = exp10f(e/10.0);
 
 	return e;
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: lpc_to_lsp()
+  AUTHOR......: David Rowe
+  DATE CREATED: 24/2/93
+
+  This function converts LPC coefficients to LSP coefficients.
+
+\*---------------------------------------------------------------------------*/
+
+int CQuantize::lpc_to_lsp(float *a, int order, float *freq, int nb, float delta)
+/*  float *a 		     	lpc coefficients			*/
+/*  int order			order of LPC coefficients (10) 		*/
+/*  float *freq 	      	LSP frequencies in radians      	*/
+/*  int nb			number of sub-intervals (4) 		*/
+/*  float delta			grid spacing interval (0.02) 		*/
+{
+	float psuml,psumr,psumm,temp_xr,xl,xr,xm = 0;
+	float temp_psumr;
+	int i,j,m,flag,k;
+	float *px;                	/* ptrs of respective P'(z) & Q'(z)	*/
+	float *qx;
+	float *p;
+	float *q;
+	float *pt;                	/* ptr used for cheb_poly_eval()
+				   whether P' or Q' 			*/
+	int roots=0;              	/* number of roots found 	        */
+	float Q[order + 1];
+	float P[order + 1];
+
+	flag = 1;
+	m = order/2;            	/* order of P'(z) & Q'(z) polynimials 	*/
+
+	/* Allocate memory space for polynomials */
+
+	/* determine P'(z)'s and Q'(z)'s coefficients where
+	  P'(z) = P(z)/(1 + z^(-1)) and Q'(z) = Q(z)/(1-z^(-1)) */
+
+	px = P;                      /* initilaise ptrs */
+	qx = Q;
+	p = px;
+	q = qx;
+	*px++ = 1.0;
+	*qx++ = 1.0;
+	for(i=1; i<=m; i++)
+	{
+		*px++ = a[i]+a[order+1-i]-*p++;
+		*qx++ = a[i]-a[order+1-i]+*q++;
+	}
+	px = P;
+	qx = Q;
+	for(i=0; i<m; i++)
+	{
+		*px = 2**px;
+		*qx = 2**qx;
+		px++;
+		qx++;
+	}
+	px = P;             	/* re-initialise ptrs 			*/
+	qx = Q;
+
+	/* Search for a zero in P'(z) polynomial first and then alternate to Q'(z).
+	Keep alternating between the two polynomials as each zero is found 	*/
+
+	xr = 0;             	/* initialise xr to zero 		*/
+	xl = 1.0;               	/* start at point xl = 1 		*/
+
+
+	for(j=0; j<order; j++)
+	{
+		if(j%2)            	/* determines whether P' or Q' is eval. */
+			pt = qx;
+		else
+			pt = px;
+
+		psuml = cheb_poly_eva(pt,xl,order);	/* evals poly. at xl 	*/
+		flag = 1;
+		while(flag && (xr >= -1.0))
+		{
+			xr = xl - delta ;                  	/* interval spacing 	*/
+			psumr = cheb_poly_eva(pt,xr,order);/* poly(xl-delta_x) 	*/
+			temp_psumr = psumr;
+			temp_xr = xr;
+
+			/* if no sign change increment xr and re-evaluate
+			   poly(xr). Repeat til sign change.  if a sign change has
+			   occurred the interval is bisected and then checked again
+			   for a sign change which determines in which interval the
+			   zero lies in.  If there is no sign change between poly(xm)
+			   and poly(xl) set interval between xm and xr else set
+			   interval between xl and xr and repeat till root is located
+			   within the specified limits  */
+
+			if(((psumr*psuml)<0.0) || (psumr == 0.0))
+			{
+				roots++;
+
+				psumm=psuml;
+				for(k=0; k<=nb; k++)
+				{
+					xm = (xl+xr)/2;        	/* bisect the interval 	*/
+					psumm=cheb_poly_eva(pt,xm,order);
+					if(psumm*psuml>0.)
+					{
+						psuml=psumm;
+						xl=xm;
+					}
+					else
+					{
+						psumr=psumm;
+						xr=xm;
+					}
+				}
+
+				/* once zero is found, reset initial interval to xr 	*/
+				freq[j] = (xm);
+				xl = xm;
+				flag = 0;       		/* reset flag for next search 	*/
+			}
+			else
+			{
+				psuml=temp_psumr;
+				xl=temp_xr;
+			}
+		}
+	}
+
+	/* convert from x domain to radians */
+
+	for(i=0; i<order; i++)
+	{
+		freq[i] = acosf(freq[i]);
+	}
+
+	return(roots);
+}
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: cheb_poly_eva()
+  AUTHOR......: David Rowe
+  DATE CREATED: 24/2/93
+
+  This function evalutes a series of chebyshev polynomials
+
+  FIXME: performing memory allocation at run time is very inefficient,
+  replace with stack variables of MAX_P size.
+
+\*---------------------------------------------------------------------------*/
+
+float CQuantize::cheb_poly_eva(float *coef,float x,int order)
+/*  float coef[]  	coefficients of the polynomial to be evaluated 	*/
+/*  float x   		the point where polynomial is to be evaluated 	*/
+/*  int order 		order of the polynomial 			*/
+{
+	int i;
+	float *t,*u,*v,sum;
+	float T[(order / 2) + 1];
+
+	/* Initialise pointers */
+
+	t = T;                          	/* T[i-2] 			*/
+	*t++ = 1.0;
+	u = t--;                        	/* T[i-1] 			*/
+	*u++ = x;
+	v = u--;                        	/* T[i] 			*/
+
+	/* Evaluate chebyshev series formulation using iterative approach 	*/
+
+	for(i=2; i<=order/2; i++)
+		*v++ = (2*x)*(*u++) - *t++;  	/* T[i] = 2*x*T[i-1] - T[i-2]	*/
+
+	sum=0.0;                        	/* initialise sum to zero 	*/
+	t = T;                          	/* reset pointer 		*/
+
+	/* Evaluate polynomial and return value also free memory space */
+
+	for(i=0; i<=order/2; i++)
+		sum+=coef[(order/2)-i]**t++;
+
+	return sum;
 }

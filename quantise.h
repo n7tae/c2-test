@@ -66,6 +66,8 @@ private:
 	int find_nearest(const float *codebook, int nb_entries, float *x, int ndim);
 	void force_min_lsp_dist(float lsp[], int order);
 	void lpc_post_filter(FFTR_STATE *fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E);
+	int lpc_to_lsp (float *a, int lpcrdr, float *freq, int nb, float delta);
+	float cheb_poly_eva(float *coef,float x,int order);
 };
 
 #endif

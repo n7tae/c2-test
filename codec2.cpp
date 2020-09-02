@@ -38,7 +38,6 @@
 #include "lpc.h"
 #include "quantise.h"
 #include "codec2.h"
-#include "lsp.h"
 #include "newamp2.h"
 #include "codec2_internal.h"
 
@@ -3142,4 +3141,116 @@ void CCodec2::interpolate_lsp_ver2(float interp[], float prev[],  float next[], 
 
 	for(i=0; i<order; i++)
 		interp[i] = (1.0 - weight)*prev[i] + weight*next[i];
+}
+
+/*---------------------------------------------------------------------------*\
+
+  Introduction to Line Spectrum Pairs (LSPs)
+  ------------------------------------------
+
+  LSPs are used to encode the LPC filter coefficients {ak} for
+  transmission over the channel.  LSPs have several properties (like
+  less sensitivity to quantisation noise) that make them superior to
+  direct quantisation of {ak}.
+
+  A(z) is a polynomial of order lpcrdr with {ak} as the coefficients.
+
+  A(z) is transformed to P(z) and Q(z) (using a substitution and some
+  algebra), to obtain something like:
+
+    A(z) = 0.5[P(z)(z+z^-1) + Q(z)(z-z^-1)]  (1)
+
+  As you can imagine A(z) has complex zeros all over the z-plane. P(z)
+  and Q(z) have the very neat property of only having zeros _on_ the
+  unit circle.  So to find them we take a test point z=exp(jw) and
+  evaluate P (exp(jw)) and Q(exp(jw)) using a grid of points between 0
+  and pi.
+
+  The zeros (roots) of P(z) also happen to alternate, which is why we
+  swap coefficients as we find roots.  So the process of finding the
+  LSP frequencies is basically finding the roots of 5th order
+  polynomials.
+
+  The root so P(z) and Q(z) occur in symmetrical pairs at +/-w, hence
+  the name Line Spectrum Pairs (LSPs).
+
+  To convert back to ak we just evaluate (1), "clocking" an impulse
+  thru it lpcrdr times gives us the impulse response of A(z) which is
+  {ak}.
+
+\*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*\
+
+  FUNCTION....: lsp_to_lpc()
+  AUTHOR......: David Rowe
+  DATE CREATED: 24/2/93
+
+  This function converts LSP coefficients to LPC coefficients.  In the
+  Speex code we worked out a way to simplify this significantly.
+
+\*---------------------------------------------------------------------------*/
+
+void CCodec2::lsp_to_lpc(float *lsp, float *ak, int order)
+/*  float *freq         array of LSP frequencies in radians     	*/
+/*  float *ak 		array of LPC coefficients 			*/
+/*  int order     	order of LPC coefficients 			*/
+
+
+{
+	int i,j;
+	float xout1,xout2,xin1,xin2;
+	float *pw,*n1,*n2,*n3,*n4 = 0;
+	float freq[order];
+	float Wp[(order * 4) + 2];
+
+	/* convert from radians to the x=cos(w) domain */
+
+	for(i=0; i<order; i++)
+		freq[i] = cosf(lsp[i]);
+
+	pw = Wp;
+
+	/* initialise contents of array */
+
+	for(i=0; i<=4*(order/2)+1; i++)        	/* set contents of buffer to 0 */
+	{
+		*pw++ = 0.0;
+	}
+
+	/* Set pointers up */
+
+	pw = Wp;
+	xin1 = 1.0;
+	xin2 = 1.0;
+
+	/* reconstruct P(z) and Q(z) by cascading second order polynomials
+	  in form 1 - 2xz(-1) +z(-2), where x is the LSP coefficient */
+
+	for(j=0; j<=order; j++)
+	{
+		for(i=0; i<(order/2); i++)
+		{
+			n1 = pw+(i*4);
+			n2 = n1 + 1;
+			n3 = n2 + 1;
+			n4 = n3 + 1;
+			xout1 = xin1 - 2*(freq[2*i]) * *n1 + *n2;
+			xout2 = xin2 - 2*(freq[2*i+1]) * *n3 + *n4;
+			*n2 = *n1;
+			*n4 = *n3;
+			*n1 = xin1;
+			*n3 = xin2;
+			xin1 = xout1;
+			xin2 = xout2;
+		}
+		xout1 = xin1 + *(n4+1);
+		xout2 = xin2 - *(n4+2);
+		ak[j] = (xout1 + xout2)*0.5;
+		*(n4+1) = xin1;
+		*(n4+2) = xin2;
+
+		xin1 = 0.0;
+		xin2 = 0.0;
+	}
 }
