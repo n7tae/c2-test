@@ -34,55 +34,50 @@
 #include "newamp2.h"
 
 using CODEC2 = struct codec2_tag {
-	int              mode;
-	C2CONST          c2const;
-	int              Fs;
-	int              n_samp;
-	int              m_pitch;
-	FFT_STATE  fft_fwd_cfg;              /* forward FFT config                        */
-	FFTR_STATE fftr_fwd_cfg;             /* forward real FFT config                   */
-	std::vector<float> w;	                       /* [m_pitch] time domain hamming window      */
-	float            W[FFT_ENC];	           /* DFT of w[]                                */
-	std::vector<float> Pn;	                   /* [2*n_samp] trapezoidal synthesis window   */
-	std::vector<float> bpf_buf;                  /* buffer for band pass filter               */
+	int                mode;
+	int                Fs;
+	int                n_samp;
+	int                m_pitch;
+	int                gray;                     /* non-zero for gray encoding                */
+	int                lpc_pf;                   /* LPC post filter on                        */
+	int                bass_boost;               /* LPC post filter bass boost                */
+	int                smoothing;                /* enable smoothing for channels with errors */
+	float              ex_phase;                 /* excitation model phase track              */
+	float              bg_est;                   /* background noise estimate for post filter */
+	float              prev_f0_enc;              /* previous frame's f0    estimate           */
+	float              prev_e_dec;               /* previous frame's LPC energy               */
+	float              beta;                     /* LPC post filter parameters                */
+	float              gamma;
+	float              xq_enc[2];                /* joint pitch and energy VQ states          */
+	float              xq_dec[2];
+	float              W[FFT_ENC];	             /* DFT of w[]                                */
+	float              hpf_states[2];            /* high pass filter states                   */
+	float              prev_lsps_dec[LPC_ORD];   /* previous frame's LSPs                     */
+	float             *softdec;                  /* optional soft decn bits from demod        */
+	MODEL              prev_model_dec;           /* previous frame's model parameters         */
+	C2CONST            c2const;
+	FFT_STATE          fft_fwd_cfg;              /* forward FFT config                        */
+	FFTR_STATE         fftr_fwd_cfg;             /* forward real FFT config                   */
+	FFTR_STATE         fftr_inv_cfg;             /* inverse FFT config                        */
+	std::vector<float> w;	                     /* [m_pitch] time domain hamming window      */
+	std::vector<float> Pn;	                     /* [2*n_samp] trapezoidal synthesis window   */
 	std::vector<float> Sn;                       /* [m_pitch] input speech                    */
-	float            hpf_states[2];            /* high pass filter states                   */
-	int              gray;                     /* non-zero for gray encoding                */
-
-	FFTR_STATE fftr_inv_cfg;             /* inverse FFT config                        */
-	std::vector<float> Sn_;	                   /* [2*n_samp] synthesised output speech      */
-	float            ex_phase;                 /* excitation model phase track              */
-	float            bg_est;                   /* background noise estimate for post filter */
-	float            prev_f0_enc;              /* previous frame's f0    estimate           */
-	MODEL            prev_model_dec;           /* previous frame's model parameters         */
-	float            prev_lsps_dec[LPC_ORD];   /* previous frame's LSPs                     */
-	float            prev_e_dec;               /* previous frame's LPC energy               */
-
-	int              lpc_pf;                   /* LPC post filter on                        */
-	int              bass_boost;               /* LPC post filter bass boost                */
-	float            beta;                     /* LPC post filter parameters                */
-	float            gamma;
-
-	float            xq_enc[2];                /* joint pitch and energy VQ states          */
-	float            xq_dec[2];
-
-	int              smoothing;                /* enable smoothing for channels with errors */
-	float           *softdec;                  /* optional soft decn bits from demod        */
+	std::vector<float> Sn_;	                     /* [2*n_samp] synthesised output speech      */
+	std::vector<float> bpf_buf;                  /* buffer for band pass filter               */
 
 	/* newamp1 states */
-
-	float            rate_K_sample_freqs_kHz[NEWAMP1_K];
-	float            prev_rate_K_vec_[NEWAMP1_K];
-	float            Wo_left;
-	int              voicing_left;
-	FFT_STATE  phase_fft_fwd_cfg;
-	FFT_STATE  phase_fft_inv_cfg;
-	float            se;                       /* running sum of squared error */
-	unsigned int     nse;                      /* number of terms in sum       */
+	int                eq_en;
+	int                voicing_left;
+	int                post_filter_en;
+	float              rate_K_sample_freqs_kHz[NEWAMP1_K];
+	float              prev_rate_K_vec_[NEWAMP1_K];
+	float              Wo_left;
+	float              se;                       /* running sum of squared error */
+	float              eq[NEWAMP1_K];            /* optional equaliser */
+	unsigned int       nse;                      /* number of terms in sum       */
+	FFT_STATE          phase_fft_fwd_cfg;
+	FFT_STATE          phase_fft_inv_cfg;
 	std::vector<float> user_rate_K_vec_no_mean_; /* optional, user supplied vector for quantisation experiments */
-	int              post_filter_en;
-	float            eq[NEWAMP1_K];            /* optional equaliser */
-	int              eq_en;
 
 	/*newamp2 states (also uses newamp1 states )*/
 	float energy_prev;

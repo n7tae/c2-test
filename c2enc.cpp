@@ -39,10 +39,6 @@ int main(int argc, char *argv[])
 	int            mode;
 	FILE          *fin;
 	FILE          *fout;
-	short         *buf;
-	unsigned char *bits;
-	float         *unpacked_bits_float;
-	char          *unpacked_bits_char;
 	int            bit, byte,i;
 	int            report_var = 0;
 	int            eq = 0;
@@ -101,12 +97,12 @@ int main(int argc, char *argv[])
 		return 1;
 	auto nsam = cc2.codec2_samples_per_frame();
 	auto nbit = cc2.codec2_bits_per_frame();
-	buf = (short*)malloc(nsam*sizeof(short));
+	short buf[nsam];
 	auto nbyte = (nbit + 7) / 8;
 
-	bits = (unsigned char*)malloc(nbyte*sizeof(char));
-	unpacked_bits_float = (float*)malloc(nbit*sizeof(float));
-	unpacked_bits_char = (char*)malloc(nbit*sizeof(char));
+	unsigned char bits[nbyte];
+	float unpacked_bits_float[nbit];
+	char unpacked_bits_char[nbit];
 
 	int gray = 1;
 	int softdec = 0;
@@ -198,10 +194,6 @@ int main(int argc, char *argv[])
 	}
 	cc2.codec2_destroy();
 
-	free(buf);
-	free(bits);
-	free(unpacked_bits_float);
-	free(unpacked_bits_char);
 	fclose(fin);
 	fclose(fout);
 

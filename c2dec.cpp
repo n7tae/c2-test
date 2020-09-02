@@ -50,10 +50,6 @@ int main(int argc, char *argv[])
 	FILE          *fin;
 	FILE          *fout;
 	FILE          *fber = NULL;
-	short         *buf;
-	unsigned char *bits;
-	float         *softdec_bits;
-	char          *bitperchar_bits;
 	int            nsam, nbit, nbyte, i, byte, frames, bits_proc, bit_errors, error_mode;
 	int            nstart_bit, nend_bit, bit_rate;
 	int            state, next_state;
@@ -149,11 +145,11 @@ int main(int argc, char *argv[])
 		return 1;
 	nsam = cc2.codec2_samples_per_frame();
 	nbit = cc2.codec2_bits_per_frame();
-	buf = (short*)malloc(nsam*sizeof(short));
+	short buf[nsam];
 	nbyte = (nbit + 7) / 8;
-	bits = (unsigned char*)malloc(nbyte*sizeof(char));
-	softdec_bits = (float*)malloc(nbit*sizeof(float));
-	bitperchar_bits = (char*)malloc(nbit*sizeof(char));
+	unsigned char bits[nbyte];
+	float softdec_bits[nbit];
+	char bitperchar_bits[nbit];
 	frames = bit_errors = bits_proc = 0;
 	nstart_bit = 0;
 	nend_bit = nbit-1;
@@ -409,10 +405,6 @@ int main(int argc, char *argv[])
 
 	cc2.codec2_destroy();
 
-	free(buf);
-	free(bits);
-	free(softdec_bits);
-	free(bitperchar_bits);
 	fclose(fin);
 	fclose(fout);
 	if (fber != NULL)
