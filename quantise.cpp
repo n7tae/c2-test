@@ -57,11 +57,6 @@ int CQuantize::lspd_bits(int i)
 	return lsp_cbd[i].log2m;
 }
 
-int CQuantize::lsp_pred_vq_bits(int i)
-{
-	return lsp_cbjvm[i].log2m;
-}
-
 
 
 /*---------------------------------------------------------------------------*\
@@ -198,17 +193,6 @@ int CQuantize::check_lsp_order(float lsp[], int order)
 		}
 
 	return swaps;
-}
-
-void CQuantize::force_min_lsp_dist(float lsp[], int order)
-{
-	int   i;
-
-	for(i=1; i<order; i++)
-		if ((lsp[i]-lsp[i-1]) < 0.01)
-		{
-			lsp[i] += 0.01;
-		}
 }
 
 
@@ -638,91 +622,6 @@ void CQuantize::decode_lsps_scalar(float lsp[], int indexes[], int order)
 	for(i=0; i<order; i++)
 		lsp[i] = (PI/4000.0)*lsp_hz[i];
 }
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: encode_lsps_vq()
-  AUTHOR......: David Rowe
-  DATE CREATED: 15 Feb 2012
-
-  Multi-stage VQ LSP quantiser developed by Jean-Marc Valin.
-
-\*---------------------------------------------------------------------------*/
-
-void CQuantize::encode_lsps_vq(int *indexes, float *x, float *xq, int order)
-{
-	int i, n1, n2, n3;
-	float err[order], err2[order], err3[order];
-	float w[order], w2[order], w3[order];
-	const float *codebook1 = lsp_cbjvm[0].cb;
-	const float *codebook2 = lsp_cbjvm[1].cb;
-	const float *codebook3 = lsp_cbjvm[2].cb;
-
-	w[0] = MIN(x[0], x[1]-x[0]);
-	for (i=1; i<order-1; i++)
-		w[i] = MIN(x[i]-x[i-1], x[i+1]-x[i]);
-	w[order-1] = MIN(x[order-1]-x[order-2], PI-x[order-1]);
-
-	compute_weights(x, w, order);
-
-	n1 = find_nearest(codebook1, lsp_cbjvm[0].m, x, order);
-
-	for (i=0; i<order; i++)
-	{
-		xq[i]  = codebook1[order*n1+i];
-		err[i] = x[i] - xq[i];
-	}
-	for (i=0; i<order/2; i++)
-	{
-		err2[i] = err[2*i];
-		err3[i] = err[2*i+1];
-		w2[i] = w[2*i];
-		w3[i] = w[2*i+1];
-	}
-	n2 = find_nearest_weighted(codebook2, lsp_cbjvm[1].m, err2, w2, order/2);
-	n3 = find_nearest_weighted(codebook3, lsp_cbjvm[2].m, err3, w3, order/2);
-
-	indexes[0] = n1;
-	indexes[1] = n2;
-	indexes[2] = n3;
-}
-
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: decode_lsps_vq()
-  AUTHOR......: David Rowe
-  DATE CREATED: 15 Feb 2012
-
-\*---------------------------------------------------------------------------*/
-
-void CQuantize::decode_lsps_vq(int *indexes, float *xq, int order, int stages)
-{
-	int i, n1, n2, n3;
-	const float *codebook1 = lsp_cbjvm[0].cb;
-	const float *codebook2 = lsp_cbjvm[1].cb;
-	const float *codebook3 = lsp_cbjvm[2].cb;
-
-	n1 = indexes[0];
-	n2 = indexes[1];
-	n3 = indexes[2];
-
-	for (i=0; i<order; i++)
-	{
-		xq[i] = codebook1[order*n1+i];
-	}
-
-	if (stages != 1)
-	{
-		for (i=0; i<order/2; i++)
-		{
-			xq[2*i] += codebook2[order*n2/2+i];
-			xq[2*i+1] += codebook3[order*n3/2+i];
-		}
-	}
-
-}
-
 
 /*---------------------------------------------------------------------------*\
 

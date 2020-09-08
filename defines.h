@@ -122,7 +122,6 @@ using FFTR_STATE = struct fftr_state_tag
 
 extern const struct lsp_codebook lsp_cb[];
 extern const struct lsp_codebook lsp_cbd[];
-extern const struct lsp_codebook lsp_cbjvm[];
 extern const struct lsp_codebook ge_cb[];
 
 #endif
