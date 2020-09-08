@@ -32,7 +32,6 @@
 #include <math.h>
 
 #include "defines.h"
-#include "dump.h"
 #include "quantise.h"
 #include "lpc.h"
 #include "kiss_fft.h"
@@ -225,7 +224,7 @@ int CQuantize::check_lsp_order(float lsp[], int order)
 
 \*---------------------------------------------------------------------------*/
 
-void CQuantize::lpc_post_filter(FFTR_STATE *fftr_fwd_cfg, float Pw[], float ak[], int order, int dump, float beta, float gamma, int bass_boost, float E)
+void CQuantize::lpc_post_filter(FFTR_STATE *fftr_fwd_cfg, float Pw[], float ak[], int order, float beta, float gamma, int bass_boost, float E)
 {
 	int   i;
 	float x[FFT_ENC];   /* input to FFTs                */
@@ -271,11 +270,6 @@ void CQuantize::lpc_post_filter(FFTR_STATE *fftr_fwd_cfg, float Pw[], float ak[]
 
 	}
 
-#ifdef DUMP
-	if (dump)
-		dump_Rw(Rw);
-#endif
-
 	/* create post filter mag spectrum and apply ------------------*/
 
 	/* measure energy before post filtering */
@@ -285,11 +279,6 @@ void CQuantize::lpc_post_filter(FFTR_STATE *fftr_fwd_cfg, float Pw[], float ak[]
 		e_before += Pw[i];
 
 	/* apply post filter and measure energy  */
-
-#ifdef DUMP
-	if (dump)
-		dump_Pwb(Pw);
-#endif
 
 
 	e_after = 1E-4;
@@ -338,7 +327,6 @@ void CQuantize::aks_to_M2(
 	MODEL        *model,	   /* sinusoidal model parameters for this frame */
 	float         E,	       /* energy term */
 	float        *snr,	       /* signal to noise ratio for this frame in dB */
-	int           dump,        /* true to dump sample to dump file */
 	int           sim_pf,      /* true to simulate a post filter */
 	int           pf,          /* true to enable actual LPC post filter */
 	int           bass_boost,  /* enable LPC filter 0-1kHz 3dB boost */
@@ -380,7 +368,7 @@ void CQuantize::aks_to_M2(
 	}
 
 	if (pf)
-		lpc_post_filter(fftr_fwd_cfg, Pw, ak, order, dump, beta, gamma, bass_boost, E);
+		lpc_post_filter(fftr_fwd_cfg, Pw, ak, order, beta, gamma, bass_boost, E);
 	else
 	{
 		for(i=0; i<FFT_ENC/2; i++)
@@ -388,11 +376,6 @@ void CQuantize::aks_to_M2(
 			Pw[i] *= E;
 		}
 	}
-
-#ifdef DUMP
-	if (dump)
-		dump_Pw(Pw);
-#endif
 
 	/* Determine magnitudes from P(w) ----------------------------------------*/
 

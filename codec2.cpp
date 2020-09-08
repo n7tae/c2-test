@@ -34,7 +34,6 @@
 #include <math.h>
 
 #include "nlp.h"
-#include "dump.h"
 #include "lpc.h"
 #include "quantise.h"
 #include "codec2.h"
@@ -376,7 +375,7 @@ void CCodec2::codec2_decode_3200(short speech[], const unsigned char * bits)
 	for(i=0; i<2; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 	}
@@ -558,7 +557,7 @@ void CCodec2::codec2_decode_1600(short speech[], const unsigned char * bits)
 	for(i=0; i<4; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
+		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
 		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
 	}
@@ -653,9 +652,6 @@ void CCodec2::analyse_one_frame(MODEL *model, short speech[])
 	/* estimate phases when doing ML experiments */
 	estimate_amplitudes(model, Sw, c2.W, 0);
 	est_voicing_mbe(&c2.c2const, model, Sw, c2.W);
-#ifdef DUMP
-	dump_model(model);
-#endif
 }
 
 
@@ -935,10 +931,7 @@ void CCodec2::phase_synth_zero_order(
 			            // spikey (impulsive) for mmt1, but speech was
                         // perhaps a little rougher.
 
-void CCodec2::postfilter(
-	MODEL *model,
-	float *bg_est
-)
+void CCodec2::postfilter( MODEL *model, float *bg_est )
 {
 	int   m, uv;
 	float e, thresh;
@@ -972,12 +965,8 @@ void CCodec2::postfilter(
 				model->phi[m] = (TWO_PI/CODEC2_RAND_MAX)*(float)codec2_rand();
 				uv++;
 			}
-
-#ifdef DUMP
-	dump_bg(e, *bg_est, 100.0*uv/model->L);
-#endif
-
 }
+
 C2CONST CCodec2::c2const_create(int Fs, float framelength_s)
 {
 	C2CONST c2const;

@@ -34,7 +34,6 @@
 #include <errno.h>
 
 #include "codec2.h"
-#include "dump.h"
 
 void print_help(char* argv[]);
 

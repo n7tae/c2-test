@@ -31,7 +31,6 @@
 
 #include "defines.h"
 #include "nlp.h"
-#include "dump.h"
 #include "kiss_fft.h"
 
 extern CKissFFT kiss;
@@ -339,9 +338,6 @@ float Cnlp::nlp(
 	{
 		Fw[i].real(snlp.sq[i*DEC]*snlp.w[i]);
 	}
-#ifdef DUMP
-	dump_dec(Fw);
-#endif
 
 	// FIXME: check if this can be converted to a real fft
 	// since all imag inputs are 0
@@ -349,11 +345,6 @@ float Cnlp::nlp(
 
 	for(i=0; i<PE_FFT_SIZE; i++)
 		Fw[i].real(Fw[i].real() * Fw[i].real() + Fw[i].imag() * Fw[i].imag());
-
-#ifdef DUMP
-	dump_sq(m, snlp.sq);
-	dump_Fw(Fw);
-#endif
 
 	/* todo: express everything in f0, as pitch in samples is dep on Fs */
 

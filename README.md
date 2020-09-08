@@ -2,7 +2,7 @@
 
 ## Description
 
-This is a C++ implementation of David Row's Codec2. The [original source repo](https://github.com/drowe67/codec2) contains the Codec2 vocoder sources and additional code to buid a number of executables. This repo only contains the vocoder sources and source for two test programs, an encoder and a decoder. It is interesting to note that a significant portion of the Codec2 vocoder source code, over two-thirds, are simple lists of floating point numbers. These numbers are used to process the input and output of forward and reverse Fourier transforms[1].
+This is a C++ implementation of David Row's Codec2. The [original source repo](https://github.com/drowe67/codec2) contains the Codec2 vocoder sources and additional code to buid a number of executables. This repo only contains the vocoder sources and source for two test programs, an encoder and a decoder, and this code can only handle 3200 and 1600 modes.
 
 Many changes were performed to translate David's C code to be supported in a C++11 standard. All operational code has been encapsulated into a few classes. The classes selected are based on C++ scope and hierarchy and so I have in some cases split up some of David's files to properly scope various function used in the vocoder. For example, the the three functions in the lsp{h,cpp} source files perform Line Spectrum Pairs are used in the main vocoder class and in the quantize functionality, so they have been separated.
 
@@ -35,7 +35,3 @@ make test
 ```
 
 This will build the encoder and decoder and then run it with each of the supported Codec2 modes. The only operating system utility needed is `aplay`. Before and after the vocoding action, the original raw voice file will be played for comparison. When done, the coded files will be listed along with the raw voice file so you can see the size comparison. You can supply your own audio file if you want to see how it sounds. You can use `sox` to convert it to an 8000 Hz, 16-bit, monoral raw audio file needed by the encoder. See `sox --help`.
-
----
-
-1. [Fourier Transform](https://en.wikipedia.org/wiki/Fourier_transform) is used to translate time-series data (like a sound wave) to or from frequency-series data (like a waterfall display), usually called a "spectrum".

@@ -35,10 +35,10 @@ EXES = c2dec c2enc
 
 all : $(EXES)
 
-c2dec : c2dec.o codec2.o dump.o lpc.o nlp.o pack.o kiss_fft.o quantise.o codebooks.o qbase.o
+c2dec : c2dec.o codec2.o lpc.o nlp.o pack.o kiss_fft.o quantise.o codebooks.o qbase.o
 	g++ -o $@ $^ $(LDFLAGS)
 
-c2enc : c2enc.o codec2.o dump.o lpc.o nlp.o pack.o kiss_fft.o quantise.o codebooks.o qbase.o
+c2enc : c2enc.o codec2.o lpc.o nlp.o pack.o kiss_fft.o quantise.o codebooks.o qbase.o
 	g++ -o $@ $^ $(LDFLAGS)
 
 %.o : %.cpp
