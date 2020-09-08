@@ -35,10 +35,10 @@ EXES = c2dec c2enc
 
 all : $(EXES)
 
-c2dec : c2dec.o codec2.o dump.o lpc.o nlp.o newamp1.o pack.o kiss_fft.o newamp2.o quantise.o codebooks.o newampbase.o qbase.o
+c2dec : c2dec.o codec2.o dump.o lpc.o nlp.o pack.o kiss_fft.o quantise.o codebooks.o qbase.o
 	g++ -o $@ $^ $(LDFLAGS)
 
-c2enc : c2enc.o codec2.o dump.o lpc.o nlp.o newamp1.o pack.o kiss_fft.o newamp2.o quantise.o codebooks.o newampbase.o qbase.o
+c2enc : c2enc.o codec2.o dump.o lpc.o nlp.o pack.o kiss_fft.o quantise.o codebooks.o qbase.o
 	g++ -o $@ $^ $(LDFLAGS)
 
 %.o : %.cpp
@@ -54,13 +54,6 @@ clean:
 test : $(EXES)
 	aplay -f S16_LE test.raw
 	./c2enc 3200 test.raw test.3200.dat && ./c2dec 3200 test.3200.dat - | aplay -f S16_LE
-	./c2enc 2400 test.raw test.2400.dat && ./c2dec 2400 test.2400.dat - | aplay -f S16_LE
 	./c2enc 1600 test.raw test.1600.dat && ./c2dec 1600 test.1600.dat - | aplay -f S16_LE
-	./c2enc 1400 test.raw test.1400.dat && ./c2dec 1400 test.1400.dat - | aplay -f S16_LE
-	./c2enc 1300 test.raw test.1300.dat && ./c2dec 1300 test.1300.dat - | aplay -f S16_LE
-	./c2enc 1200 test.raw test.1200.dat && ./c2dec 1200 test.1200.dat - | aplay -f S16_LE
-	./c2enc 700C test.raw test.0700.dat && ./c2dec 700C test.0700.dat - | aplay -f S16_LE
-	./c2enc  450 test.raw test.0450.dat && ./c2dec  450 test.0450.dat - | aplay -f S16_LE
-	./c2dec 450PWB test.0450.dat - | aplay -r 16000 -f S16_LE
 	aplay -f S16_LE test.raw
 	ls -l *.dat test.raw

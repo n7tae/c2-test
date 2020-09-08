@@ -30,8 +30,6 @@
 #define __CODEC2_INTERNAL__
 
 #include "kiss_fft.h"
-#include "newamp1.h"
-#include "newamp2.h"
 
 using CODEC2 = struct codec2_tag {
 	int                mode;
@@ -64,30 +62,6 @@ using CODEC2 = struct codec2_tag {
 	std::vector<float> Sn;                       /* [m_pitch] input speech                    */
 	std::vector<float> Sn_;	                     /* [2*n_samp] synthesised output speech      */
 	std::vector<float> bpf_buf;                  /* buffer for band pass filter               */
-
-	/* newamp1 states */
-	int                eq_en;
-	int                voicing_left;
-	int                post_filter_en;
-	float              rate_K_sample_freqs_kHz[NEWAMP1_K];
-	float              prev_rate_K_vec_[NEWAMP1_K];
-	float              Wo_left;
-	float              se;                       /* running sum of squared error */
-	float              eq[NEWAMP1_K];            /* optional equaliser */
-	unsigned int       nse;                      /* number of terms in sum       */
-	FFT_STATE          phase_fft_fwd_cfg;
-	FFT_STATE          phase_fft_inv_cfg;
-	std::vector<float> user_rate_K_vec_no_mean_; /* optional, user supplied vector for quantisation experiments */
-
-	/*newamp2 states (also uses newamp1 states )*/
-	float energy_prev;
-	float n2_rate_K_sample_freqs_kHz[NEWAMP2_K];
-	float n2_prev_rate_K_vec_[NEWAMP2_K];
-	float n2_pwb_rate_K_sample_freqs_kHz[NEWAMP2_16K_K];
-	float n2_pwb_prev_rate_K_vec_[NEWAMP2_16K_K];
-
-	/* used to dump features for deep learning experiments */
-	FILE *fmlfeat, *fmlmodel;
 };
 
 #endif
