@@ -214,7 +214,7 @@ int CCodec2::codec2_samples_per_frame()
 	return 0; /* shouldnt get here */
 }
 
-void CCodec2::codec2_encode(unsigned char *bits, short *speech)
+void CCodec2::codec2_encode(unsigned char *bits, const short *speech)
 {
 	assert(encode != NULL);
 
@@ -255,7 +255,7 @@ void CCodec2::codec2_decode(short *speech, const unsigned char *bits)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_3200(unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_3200(unsigned char *bits, const short *speech)
 {
 	MODEL   model;
 	float   ak[LPC_ORD+1];
@@ -400,7 +400,7 @@ void CCodec2::codec2_decode_3200(short speech[], const unsigned char * bits)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_1600(unsigned char * bits, short speech[])
+void CCodec2::codec2_encode_1600(unsigned char * bits, const short speech[])
 {
 	MODEL   model;
 	float   lsps[LPC_ORD];
@@ -608,7 +608,7 @@ void CCodec2::synthesise_one_frame(short speech[], MODEL *model, std::complex<fl
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::analyse_one_frame(MODEL *model, short speech[])
+void CCodec2::analyse_one_frame(MODEL *model, const short *speech)
 {
 	std::complex<float>    Sw[FFT_ENC];
 	float   pitch;

@@ -52,7 +52,7 @@ class CCodec2
 public:
 	CCodec2(bool is_3200);
 	~CCodec2();
-	void codec2_encode(unsigned char *bits, short *speech_in);
+	void codec2_encode(unsigned char *bits, const short *speech_in);
 	void codec2_decode(short *speech_out, const unsigned char *bits);
 	int  codec2_samples_per_frame();
 	int  codec2_bits_per_frame();
@@ -80,17 +80,17 @@ private:
 	float interp_energy(float prev, float next);
 	void interpolate_lsp_ver2(float interp[], float prev[],  float next[], float weight, int order);
 
-	void analyse_one_frame(MODEL *model, short speech[]);
+	void analyse_one_frame(MODEL *model, const short *speech);
 	void synthesise_one_frame(short speech[], MODEL *model, std::complex<float> Aw[], float gain);
-	void codec2_encode_3200(unsigned char * bits, short speech[]);
-	void codec2_decode_3200(short speech[], const unsigned char * bits);
-	void codec2_encode_1600(unsigned char * bits, short speech[]);
-	void codec2_decode_1600(short speech[], const unsigned char * bits);
+	void codec2_encode_3200(unsigned char *bits, const short *speech);
+	void codec2_encode_1600(unsigned char *bits, const short *speech);
+	void codec2_decode_3200(short *speech, const unsigned char *bits);
+	void codec2_decode_1600(short *speech, const unsigned char *bits);
 	void ear_protection(float in_out[], int n);
 	void lsp_to_lpc(float *freq, float *ak, int lpcrdr);
 
-	void (CCodec2::*encode)(unsigned char * bits, short speech[]);
-	void (CCodec2::*decode)(short speech[], const unsigned char * bits);
+	void (CCodec2::*encode)(unsigned char *bits, const short *speech);
+	void (CCodec2::*decode)(short *speech, const unsigned char *bits);
 	Cnlp nlp;
 	CQuantize qt;
 	CODEC2 c2;
