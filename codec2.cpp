@@ -230,14 +230,14 @@ int CCodec2::codec2_samples_per_frame()
 	return 0; /* shouldnt get here */
 }
 
-void CCodec2::codec2_encode(unsigned char *bits, short speech[])
+void CCodec2::codec2_encode(unsigned char *bits, short *speech)
 {
 	assert(encode != NULL);
 
 	(*this.*encode)(bits, speech);
 }
 
-void CCodec2::codec2_decode(short speech[], const unsigned char *bits)
+void CCodec2::codec2_decode(short *speech, const unsigned char *bits)
 {
 	assert(decode != NULL);
 

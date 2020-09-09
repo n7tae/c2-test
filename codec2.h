@@ -69,8 +69,8 @@ class CCodec2
 public:
 	bool codec2_create(int mode);
 	void codec2_destroy();
-	void codec2_encode(unsigned char * bits, short speech_in[]);
-	void codec2_decode(short speech_out[], const unsigned char *bits);
+	void codec2_encode(unsigned char *bits, short *speech_in);
+	void codec2_decode(short *speech_out, const unsigned char *bits);
 	int  codec2_samples_per_frame();
 	int  codec2_bits_per_frame();
 
