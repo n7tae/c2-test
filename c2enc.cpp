@@ -36,13 +36,11 @@
 
 int main(int argc, char *argv[])
 {
-	int            mode;
+	int            mode = 0;
 	FILE          *fin;
 	FILE          *fout;
 	int            bit, byte,i;
 	int            eq = 0;
-
-	CCodec2 cc2;
 
 	if (argc < 4)
 	{
@@ -51,9 +49,9 @@ int main(int argc, char *argv[])
 	}
 
 	if (strcmp(argv[1],"3200") == 0)
-		mode = CODEC2_MODE_3200;
+		mode = 3200;
 	else if (strcmp(argv[1],"1600") == 0)
-		mode = CODEC2_MODE_1600;
+		mode = 1600;
 	else
 	{
 		fprintf(stderr, "Error in mode: %s.  Must be 3200 or 1600\n", argv[1]);
@@ -76,8 +74,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (cc2.codec2_create(mode))
-		return 1;
+	CCodec2 cc2(mode == 3200);
 	auto nsam = cc2.codec2_samples_per_frame();
 	auto nbit = cc2.codec2_bits_per_frame();
 	short buf[nsam];
@@ -100,8 +97,6 @@ int main(int argc, char *argv[])
 		if (fout == stdout) fflush(stdout);
 		if (fin == stdin) fflush(stdin);
 	}
-
-	cc2.codec2_destroy();
 
 	fclose(fin);
 	fclose(fout);

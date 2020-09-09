@@ -73,22 +73,9 @@ CKissFFT kiss;
 
 \*---------------------------------------------------------------------------*/
 
-
-//Don't create CODEC2_MODE_450PWB for Encoding as it has undefined behavior !
-bool CCodec2::codec2_create(int mode)
+CCodec2::CCodec2(bool is_3200)
 {
-	// ALL POSSIBLE MODES MUST BE CHECKED HERE!
-	// we test if the desired mode is enabled at compile time
-	// and return true if not
-
-	if (false == ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, mode)
-				   || CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, mode)
-				 ) )
-	{
-		return true;
-	}
-
-	c2.mode = mode;
+	c2.mode = is_3200 ? 3200 : 1600;
 
 	/* store constants in a few places for convenience */
 
@@ -153,19 +140,16 @@ bool CCodec2::codec2_create(int mode)
 
 	decode = NULL;
 
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2.mode))
+	if ( 3200 == c2.mode)
 	{
 		encode = &CCodec2::codec2_encode_3200;
 		decode = &CCodec2::codec2_decode_3200;
 	}
-
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2.mode))
+	else
 	{
 		encode = &CCodec2::codec2_encode_1600;
 		decode = &CCodec2::codec2_decode_1600;
 	}
-
-	return false;
 }
 
 /*---------------------------------------------------------------------------*\
@@ -178,7 +162,7 @@ bool CCodec2::codec2_create(int mode)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_destroy()
+CCodec2::~CCodec2()
 {
 	c2.bpf_buf.clear();
 	nlp.nlp_destroy();
@@ -223,9 +207,9 @@ int CCodec2::codec2_bits_per_frame()
 
 int CCodec2::codec2_samples_per_frame()
 {
-	if ( CODEC2_MODE_ACTIVE(CODEC2_MODE_3200, c2.mode))
+	if (3200 == c2.mode)
 		return 160;
-	if  ( CODEC2_MODE_ACTIVE(CODEC2_MODE_1600, c2.mode))
+	else
 		return 320;
 	return 0; /* shouldnt get here */
 }

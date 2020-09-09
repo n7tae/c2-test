@@ -47,28 +47,11 @@
 
 #define CODEC2_RAND_MAX 32767
 
-// by default we enable all modes
-// disable during compile time with -DCODEC2_MODE_1600_EN=0
-// all but CODEC2 1600 are enabled then
-
-//or the other way round
-// -DCODEC2_MODE_EN_DEFAULT=0 -DCODEC2_MODE_1600_EN=1
-// only CODEC2 Mode 1600
-
-#if !defined(CODEC2_MODE_3200_EN)
-        #define CODEC2_MODE_3200_EN CODEC2_MODE_EN_DEFAULT
-#endif
-#if !defined(CODEC2_MODE_1600_EN)
-        #define CODEC2_MODE_1600_EN CODEC2_MODE_EN_DEFAULT
-#endif
-
-#define CODEC2_MODE_ACTIVE(mode_name, var)  ((mode_name##_EN) == 0 ? 0: (var) == mode_name)
-
 class CCodec2
 {
 public:
-	bool codec2_create(int mode);
-	void codec2_destroy();
+	CCodec2(bool is_3200);
+	~CCodec2();
 	void codec2_encode(unsigned char *bits, short *speech_in);
 	void codec2_decode(short *speech_out, const unsigned char *bits);
 	int  codec2_samples_per_frame();
