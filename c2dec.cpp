@@ -82,8 +82,6 @@ int main(int argc, char *argv[])
 	int nbyte = (nbit + 7) / 8;
 	unsigned char bits[nbyte];
 
-	int natural = 0;
-	cc2.codec2_set_natural_or_gray(!natural);
 	auto ret = (fread(bits, sizeof(char), nbyte, fin) == (size_t)nbyte);
 
 	while(ret)

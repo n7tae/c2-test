@@ -73,7 +73,6 @@ public:
 	void codec2_decode(short speech_out[], const unsigned char *bits);
 	int  codec2_samples_per_frame();
 	int  codec2_bits_per_frame();
-	void codec2_set_natural_or_gray(int gray);
 
 private:
 	// merged from other files

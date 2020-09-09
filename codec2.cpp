@@ -695,11 +695,6 @@ void CCodec2::ear_protection(float in_out[], int n)
 	}
 }
 
-void CCodec2::codec2_set_natural_or_gray(int gray)
-{
-	c2.gray = gray;
-}
-
 /*---------------------------------------------------------------------------*\
 
   sample_phase()

@@ -85,9 +85,6 @@ int main(int argc, char *argv[])
 
 	unsigned char bits[nbyte];
 
-	int gray = 1;
-	cc2.codec2_set_natural_or_gray(gray);
-
 	//fprintf(stderr,"gray: %d softdec: %d\n", gray, softdec);
 
 	while(fread(buf, sizeof(short), nsam, fin) == (size_t)nsam)
