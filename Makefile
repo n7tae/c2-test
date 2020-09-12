@@ -20,10 +20,10 @@
 
 
 # use this if you want debugging help in the case of a crash
-#CPPFLAGS=-ggdb -W -std=c++11
+#CPPFLAGS=-ggdb -W -Wall -std=c++11
 
 # or, you can choose this for a much smaller executable without debugging help
-CPPFLAGS=-W -std=c++11
+CPPFLAGS=-W -Wall -std=c++11
 
 LDFLAGS=-L/usr/lib -lrt
 

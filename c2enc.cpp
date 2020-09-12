@@ -39,8 +39,6 @@ int main(int argc, char *argv[])
 	int            mode = 0;
 	FILE          *fin;
 	FILE          *fout;
-	int            bit, byte,i;
-	int            eq = 0;
 
 	if (argc < 4)
 	{

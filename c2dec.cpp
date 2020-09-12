@@ -103,8 +103,6 @@ int main(int argc, char *argv[])
 
 void print_help(char* argv[])
 {
-	int i;
-	const char *option_parameters;
 	fprintf(stderr, "\nc2dec - Codec 2 decoder and bit error simulation program\n"
 			"usage: %s 3200|1600 InputFile OutputRawFile\n\n"
 			"Options:\n", argv[0]);
