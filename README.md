@@ -29,7 +29,7 @@ There are several other significant changes to the Codec2 sources:
 Clone this repo and then see what it does:
 
 ```bash
-git clone git://github.com/n7tae/c2-test.git
+git clone https://github.com/n7tae/c2-test.git
 cd c2-test
 make test
 ```
