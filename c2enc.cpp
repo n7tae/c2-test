@@ -36,45 +36,34 @@
 
 int main(int argc, char *argv[])
 {
-	int            mode = 0;
 	FILE          *fin;
 	FILE          *fout;
 
-	if (argc < 4)
+	if (argc < 3)
 	{
-		printf("usage: c2enc 3200|1600 InputRawspeechFile OutputBitFile\n");
+		printf("usage: c2enc InputRawspeechFile OutputBitFile\n");
 		exit(1);
 	}
 
-	if (strcmp(argv[1],"3200") == 0)
-		mode = 3200;
-	else if (strcmp(argv[1],"1600") == 0)
-		mode = 1600;
-	else
-	{
-		fprintf(stderr, "Error in mode: %s.  Must be 3200 or 1600\n", argv[1]);
-		exit(1);
-	}
-
-	if (strcmp(argv[2], "-")  == 0) fin = stdin;
-	else if ( (fin = fopen(argv[2],"rb")) == NULL )
+	if (strcmp(argv[1], "-")  == 0) fin = stdin;
+	else if ( (fin = fopen(argv[1],"rb")) == NULL )
 	{
 		fprintf(stderr, "Error opening input speech file: %s: %s.\n",
+				argv[1], strerror(errno));
+		exit(1);
+	}
+
+	if (strcmp(argv[2], "-") == 0) fout = stdout;
+	else if ( (fout = fopen(argv[2],"wb")) == NULL )
+	{
+		fprintf(stderr, "Error opening output compressed bit file: %s: %s.\n",
 				argv[2], strerror(errno));
 		exit(1);
 	}
 
-	if (strcmp(argv[3], "-") == 0) fout = stdout;
-	else if ( (fout = fopen(argv[3],"wb")) == NULL )
-	{
-		fprintf(stderr, "Error opening output compressed bit file: %s: %s.\n",
-				argv[3], strerror(errno));
-		exit(1);
-	}
-
-	CCodec2 cc2(mode == 3200);
-	auto nsam = cc2.codec2_samples_per_frame();
-	auto nbit = cc2.codec2_bits_per_frame();
+	CCodec2 cc2;
+	auto nsam = cc2.samples_per_frame();
+	auto nbit = cc2.bits_per_frame();
 	short buf[nsam];
 	auto nbyte = (nbit + 7) / 8;
 
@@ -85,7 +74,7 @@ int main(int argc, char *argv[])
 	while(fread(buf, sizeof(short), nsam, fin) == (size_t)nsam)
 	{
 
-		cc2.codec2_encode(bits, buf);
+		cc2.encode(bits, buf);
 
 		fwrite(bits, sizeof(char), nbyte, fout);
 

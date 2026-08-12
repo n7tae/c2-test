@@ -73,10 +73,8 @@ CKissFFT kiss;
 
 \*---------------------------------------------------------------------------*/
 
-CCodec2::CCodec2(bool is_3200)
+CCodec2::CCodec2()
 {
-	c2.mode = is_3200 ? 3200 : 1600;
-
 	/* store constants in a few places for convenience */
 
 	c2.c2const = c2const_create(8000, N_S);
@@ -133,23 +131,6 @@ CCodec2::CCodec2(bool is_3200)
 
 	c2.softdec = NULL;
 	c2.gray = 1;
-
-	// make sure that one of the two decode function pointers is empty
-	// for the encode function pointer this is not required since we always set it
-	// to a meaningful value
-
-	decode = NULL;
-
-	if ( 3200 == c2.mode)
-	{
-		encode = &CCodec2::codec2_encode_3200;
-		decode = &CCodec2::codec2_decode_3200;
-	}
-	else
-	{
-		encode = &CCodec2::codec2_encode_1600;
-		decode = &CCodec2::codec2_decode_1600;
-	}
 }
 
 /*---------------------------------------------------------------------------*\
@@ -189,7 +170,7 @@ CCodec2::~CCodec2()
 
 \*---------------------------------------------------------------------------*/
 
-int CCodec2::codec2_bits_per_frame()
+int CCodec2::bits_per_frame()
 {
 	return 64;
 }
@@ -205,33 +186,14 @@ int CCodec2::codec2_bits_per_frame()
 
 \*---------------------------------------------------------------------------*/
 
-int CCodec2::codec2_samples_per_frame()
+int CCodec2::samples_per_frame()
 {
-	if (3200 == c2.mode)
-		return 160;
-	else
-		return 320;
-	return 0; /* shouldnt get here */
+	return 160;
 }
-
-void CCodec2::codec2_encode(unsigned char *bits, const short *speech)
-{
-	assert(encode != NULL);
-
-	(*this.*encode)(bits, speech);
-}
-
-void CCodec2::codec2_decode(short *speech, const unsigned char *bits)
-{
-	assert(decode != NULL);
-
-	(*this.*decode)(speech, bits);
-}
-
 
 /*---------------------------------------------------------------------------*\
 
-  FUNCTION....: codec2_encode_3200
+  FUNCTION....: encode
   AUTHOR......: David Rowe
   DATE CREATED: 13 Sep 2012
 
@@ -255,7 +217,7 @@ void CCodec2::codec2_decode(short *speech, const unsigned char *bits)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_encode_3200(unsigned char *bits, const short *speech)
+void CCodec2::encode(unsigned char *bits, const short *speech)
 {
 	MODEL   model;
 	float   ak[LPC_ORD+1];
@@ -266,7 +228,7 @@ void CCodec2::codec2_encode_3200(unsigned char *bits, const short *speech)
 	int     i;
 	unsigned int nbit = 0;
 
-	memset(bits, '\0', ((codec2_bits_per_frame() + 7) / 8));
+	memset(bits, '\0', ((bits_per_frame() + 7) / 8));
 
 	/* first 10ms analysis frame - we just want voicing */
 
@@ -289,13 +251,13 @@ void CCodec2::codec2_encode_3200(unsigned char *bits, const short *speech)
 	{
 		qt.pack(bits, &nbit, lspd_indexes[i], qt.lspd_bits(i));
 	}
-	assert(nbit == (unsigned)codec2_bits_per_frame());
+	assert(nbit == (unsigned)bits_per_frame());
 }
 
 
 /*---------------------------------------------------------------------------*\
 
-  FUNCTION....: codec2_decode_3200
+  FUNCTION....: decode
   AUTHOR......: David Rowe
   DATE CREATED: 13 Sep 2012
 
@@ -303,7 +265,7 @@ void CCodec2::codec2_encode_3200(unsigned char *bits, const short *speech)
 
 \*---------------------------------------------------------------------------*/
 
-void CCodec2::codec2_decode_3200(short speech[], const unsigned char * bits)
+void CCodec2::decode(short *speech, const unsigned char *bits)
 {
 	MODEL   model[2];
 	int     lspd_indexes[LPC_ORD];
@@ -370,189 +332,6 @@ void CCodec2::codec2_decode_3200(short speech[], const unsigned char * bits)
 	c2.prev_e_dec = e[1];
 	for(i=0; i<LPC_ORD; i++)
 		c2.prev_lsps_dec[i] = lsps[1][i];
-}
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: codec2_encode_1600
-  AUTHOR......: David Rowe
-  DATE CREATED: Feb 28 2013
-
-  Encodes 320 speech samples (40ms of speech) into 64 bits.
-
-  The codec2 algorithm actually operates internally on 10ms (80
-  sample) frames, so we run the encoding algorithm 4 times:
-
-  frame 0: voicing bit
-  frame 1: voicing bit, Wo and E
-  frame 2: voicing bit
-  frame 3: voicing bit, Wo and E, scalar LSPs
-
-  The bit allocation is:
-
-    Parameter                      frame 2  frame 4   Total
-    -------------------------------------------------------
-    Harmonic magnitudes (LSPs)      0       36        36
-    Pitch (Wo)                      7        7        14
-    Energy                          5        5        10
-    Voicing (10ms update)           2        2         4
-    TOTAL                          14       50        64
-
-\*---------------------------------------------------------------------------*/
-
-void CCodec2::codec2_encode_1600(unsigned char * bits, const short speech[])
-{
-	MODEL   model;
-	float   lsps[LPC_ORD];
-	float   ak[LPC_ORD+1];
-	float   e;
-	int     lsp_indexes[LPC_ORD];
-	int     Wo_index, e_index;
-	int     i;
-	unsigned int nbit = 0;
-
-	memset(bits, '\0',  ((codec2_bits_per_frame() + 7) / 8));
-
-	/* frame 1: - voicing ---------------------------------------------*/
-
-	analyse_one_frame(&model, speech);
-	qt.pack(bits, &nbit, model.voiced, 1);
-
-	/* frame 2: - voicing, scalar Wo & E -------------------------------*/
-
-	analyse_one_frame(&model, &speech[c2.n_samp]);
-	qt.pack(bits, &nbit, model.voiced, 1);
-
-	Wo_index = qt.encode_Wo(&c2.c2const, model.Wo, WO_BITS);
-	qt.pack(bits, &nbit, Wo_index, WO_BITS);
-
-	/* need to run this just to get LPC energy */
-	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
-	e_index = qt.encode_energy(e, E_BITS);
-	qt.pack(bits, &nbit, e_index, E_BITS);
-
-	/* frame 3: - voicing ---------------------------------------------*/
-
-	analyse_one_frame(&model, &speech[2*c2.n_samp]);
-	qt.pack(bits, &nbit, model.voiced, 1);
-
-	/* frame 4: - voicing, scalar Wo & E, scalar LSPs ------------------*/
-
-	analyse_one_frame(&model, &speech[3*c2.n_samp]);
-	qt.pack(bits, &nbit, model.voiced, 1);
-
-	Wo_index = qt.encode_Wo(&c2.c2const, model.Wo, WO_BITS);
-	qt.pack(bits, &nbit, Wo_index, WO_BITS);
-
-	e = qt.speech_to_uq_lsps(lsps, ak, c2.Sn.data(), c2.w.data(), c2.m_pitch, LPC_ORD);
-	e_index = qt.encode_energy(e, E_BITS);
-	qt.pack(bits, &nbit, e_index, E_BITS);
-
-	qt.encode_lsps_scalar(lsp_indexes, lsps, LPC_ORD);
-	for(i=0; i<LSP_SCALAR_INDEXES; i++)
-	{
-		qt.pack(bits, &nbit, lsp_indexes[i], qt.lsp_bits(i));
-	}
-
-	assert(nbit == (unsigned)codec2_bits_per_frame());
-}
-
-
-/*---------------------------------------------------------------------------*\
-
-  FUNCTION....: codec2_decode_1600
-  AUTHOR......: David Rowe
-  DATE CREATED: 11 May 2012
-
-  Decodes frames of 64 bits into 320 samples (40ms) of speech.
-
-\*---------------------------------------------------------------------------*/
-
-void CCodec2::codec2_decode_1600(short speech[], const unsigned char * bits)
-{
-	MODEL   model[4];
-	int     lsp_indexes[LPC_ORD];
-	float   lsps[4][LPC_ORD];
-	int     Wo_index, e_index;
-	float   e[4];
-	float   snr;
-	float   ak[4][LPC_ORD+1];
-	int     i,j;
-	unsigned int nbit = 0;
-	float   weight;
-	std::complex<float>    Aw[FFT_ENC];
-
-	/* only need to zero these out due to (unused) snr calculation */
-
-	for(i=0; i<4; i++)
-		for(j=1; j<=MAX_AMP; j++)
-			model[i].A[j] = 0.0;
-
-	/* unpack bits from channel ------------------------------------*/
-
-	/* this will partially fill the model params for the 4 x 10ms
-	   frames */
-
-	model[0].voiced = qt.unpack(bits, &nbit, 1);
-
-	model[1].voiced = qt.unpack(bits, &nbit, 1);
-	Wo_index = qt.unpack(bits, &nbit, WO_BITS);
-	model[1].Wo = qt.decode_Wo(&c2.c2const, Wo_index, WO_BITS);
-	model[1].L  = PI/model[1].Wo;
-
-	e_index = qt.unpack(bits, &nbit, E_BITS);
-	e[1] = qt.decode_energy(e_index, E_BITS);
-
-	model[2].voiced = qt.unpack(bits, &nbit, 1);
-
-	model[3].voiced = qt.unpack(bits, &nbit, 1);
-	Wo_index = qt.unpack(bits, &nbit, WO_BITS);
-	model[3].Wo = qt.decode_Wo(&c2.c2const, Wo_index, WO_BITS);
-	model[3].L  = PI/model[3].Wo;
-
-	e_index = qt.unpack(bits, &nbit, E_BITS);
-	e[3] = qt.decode_energy(e_index, E_BITS);
-
-	for(i=0; i<LSP_SCALAR_INDEXES; i++)
-	{
-		lsp_indexes[i] = qt.unpack(bits, &nbit, qt.lsp_bits(i));
-	}
-	qt.decode_lsps_scalar(&lsps[3][0], lsp_indexes, LPC_ORD);
-	qt.check_lsp_order(&lsps[3][0], LPC_ORD);
-	qt.bw_expand_lsps(&lsps[3][0], LPC_ORD, 50.0, 100.0);
-
-	/* interpolate ------------------------------------------------*/
-
-	/* Wo and energy are sampled every 20ms, so we interpolate just 1
-	   10ms frame between 20ms samples */
-
-	interp_Wo(&model[0], &c2.prev_model_dec, &model[1], c2.c2const.Wo_min);
-	e[0] = interp_energy(c2.prev_e_dec, e[1]);
-	interp_Wo(&model[2], &model[1], &model[3], c2.c2const.Wo_min);
-	e[2] = interp_energy(e[1], e[3]);
-
-	/* LSPs are sampled every 40ms so we interpolate the 3 frames in
-	   between, then recover spectral amplitudes */
-
-	for(i=0, weight=0.25; i<3; i++, weight += 0.25)
-	{
-		interpolate_lsp_ver2(&lsps[i][0], c2.prev_lsps_dec, &lsps[3][0], weight, LPC_ORD);
-	}
-	for(i=0; i<4; i++)
-	{
-		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
-		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
-		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
-	}
-
-	/* update memories for next frame ----------------------------*/
-
-	c2.prev_model_dec = model[3];
-	c2.prev_e_dec = e[3];
-	for(i=0; i<LPC_ORD; i++)
-		c2.prev_lsps_dec[i] = lsps[3][i];
-
 }
 
 /*---------------------------------------------------------------------------* \

@@ -32,7 +32,6 @@
 #include "kiss_fft.h"
 
 using CODEC2 = struct codec2_tag {
-	int                mode;
 	int                Fs;
 	int                n_samp;
 	int                m_pitch;

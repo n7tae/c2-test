@@ -20,10 +20,10 @@
 
 
 # use this if you want debugging help in the case of a crash
-#CPPFLAGS=-ggdb -W -Wall -std=c++11
+#CPPFLAGS=-ggdb -W -Wall -Wextra -Werror -std=c++17
 
 # or, you can choose this for a much smaller executable without debugging help
-CPPFLAGS=-W -Wall -std=c++11
+CPPFLAGS=-W -Wall -Wextra -Werror -std=c++17
 
 LDFLAGS=-L/usr/lib -lrt
 
@@ -53,7 +53,7 @@ clean:
 
 test : $(EXES)
 	aplay -f S16_LE test.raw
-	./c2enc 3200 test.raw test.3200.dat && ./c2dec 3200 test.3200.dat - | aplay -f S16_LE
-	./c2enc 1600 test.raw test.1600.dat && ./c2dec 1600 test.1600.dat - | aplay -f S16_LE
-	aplay -f S16_LE test.raw
-	ls -l *.dat test.raw
+	./c2enc test.raw test.dat && ./c2dec test.dat - | aplay -f S16_LE
+	aplay -f S16_LE speak.raw
+	./c2enc speak.raw speak.dat && ./c2dec speak.dat - | aplay -f S16_LE
+	ls -l *.dat *.raw
