@@ -9,8 +9,8 @@
 
 #define E_BITS      5
 #define E_LEVELS    (1<<E_BITS)
-#define E_MIN_DB   -10.0
-#define E_MAX_DB    40.0
+#define E_MIN_DB   -10.0f
+#define E_MAX_DB    40.0f
 
 #define LSP_SCALAR_INDEXES    10
 #define LSPD_SCALAR_INDEXES    10
@@ -18,8 +18,8 @@
 
 #define WO_E_BITS   8
 
-#define LPCPF_GAMMA 0.5
-#define LPCPF_BETA  0.2
+#define LPCPF_GAMMA 0.5f
+#define LPCPF_BETA  0.2f
 
 class CQbase {
 public:
@@ -32,7 +32,7 @@ protected:
 	void compute_weights2(const float *x, const float *xp, float *w);
 	int find_nearest_weighted(const float *codebook, int nb_entries, float *x, const float *w, int ndim);
 
-	const float ge_coeff[2] = { 0.8, 0.9 };
+	const float ge_coeff[2] = { 0.8f, 0.9f };
 
 };
 

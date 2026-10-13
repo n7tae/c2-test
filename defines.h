@@ -39,26 +39,24 @@
 
 /* General defines */
 
-#define N_S        0.01         /* internal proc frame length in secs   */
-#define TW_S       0.005        /* trapezoidal synth window overlap     */
+#define N_S        0.01f         /* internal proc frame length in secs   */
+#define TW_S       0.005f        /* trapezoidal synth window overlap     */
 #define MAX_AMP    160			/* maximum number of harmonics          */
-#ifndef PI
-#define PI         3.141592654	/* mathematical constant                */
-#endif
-#define TWO_PI     6.283185307	/* mathematical constant                */
+#define PI         3.141592654f	/* mathematical constant                */
+#define TWO_PI     6.283185307f	/* mathematical constant                */
 #define MAX_STR    2048         /* maximum string size                  */
 
 #define FFT_ENC    512			/* size of FFT used for encoder         */
 #define FFT_DEC    512	    	/* size of FFT used in decoder          */
-#define V_THRESH   6.0          /* voicing threshold in dB              */
+#define V_THRESH   6.0f          /* voicing threshold in dB              */
 #define LPC_ORD    10			/* LPC order                            */
 #define LPC_ORD_LOW 6			/* LPC order for lower rates            */
 
 /* Pitch estimation defines */
 
-#define M_PITCH_S  0.0400       /* pitch analysis window in s           */
-#define P_MIN_S    0.0025		/* minimum pitch period in s            */
-#define P_MAX_S    0.0200		/* maximum pitch period in s            */
+#define M_PITCH_S  0.0400f       /* pitch analysis window in s           */
+#define P_MIN_S    0.0025f		/* minimum pitch period in s            */
+#define P_MAX_S    0.0200f		/* maximum pitch period in s            */
 #define MAXFACTORS 32			// e.g. an fft of length 128 has 4 factors
  								// as far as kissfft is concerned 4*4*4*2
 

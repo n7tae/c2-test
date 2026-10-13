@@ -39,7 +39,7 @@
 #include "codec2.h"
 #include "codec2_internal.h"
 
-#define HPF_BETA 0.125
+#define HPF_BETA 0.125f
 #define BPF_N 101
 
 CKissFFT kiss;
@@ -88,8 +88,8 @@ CCodec2::CCodec2()
 	c2.Sn.resize(m_pitch);
 
 	for(int i=0; i<m_pitch; i++)
-		c2.Sn[i] = 1.0;
-	c2.hpf_states[0] = c2.hpf_states[1] = 0.0;
+		c2.Sn[i] = 1.0f;
+	c2.hpf_states[0] = c2.hpf_states[1] = 0.0f;
 	for(int i=0; i<2*n_samp; i++)
 		c2.Sn_[i] = 0;
 	kiss.fft_alloc(c2.fft_fwd_cfg, FFT_ENC, false);
@@ -98,11 +98,11 @@ CCodec2::CCodec2()
 	make_synthesis_window(&c2.c2const, c2.Pn.data());
 	kiss.fftr_alloc(c2.fftr_inv_cfg, FFT_DEC, true);
 	c2.prev_f0_enc = 1/P_MAX_S;
-	c2.bg_est = 0.0;
-	c2.ex_phase = 0.0;
+	c2.bg_est = 0.0f;
+	c2.ex_phase = 0.0f;
 
 	for(int l=1; l<=MAX_AMP; l++)
-		c2.prev_model_dec.A[l] = 0.0;
+		c2.prev_model_dec.A[l] = 0.0f;
 	c2.prev_model_dec.Wo = TWO_PI/c2.c2const.p_max;
 	c2.prev_model_dec.L = PI/c2.prev_model_dec.Wo;
 	c2.prev_model_dec.voiced = 0;
@@ -120,14 +120,14 @@ CCodec2::CCodec2()
 	c2.beta = LPCPF_BETA;
 	c2.gamma = LPCPF_GAMMA;
 
-	c2.xq_enc[0] = c2.xq_enc[1] = 0.0;
-	c2.xq_dec[0] = c2.xq_dec[1] = 0.0;
+	c2.xq_enc[0] = c2.xq_enc[1] = 0.0f;
+	c2.xq_dec[0] = c2.xq_dec[1] = 0.0f;
 
 	c2.smoothing = 0;
 
 	c2.bpf_buf.resize(BPF_N+4*c2.n_samp);
 	for(int i=0; i<BPF_N+4*c2.n_samp; i++)
-		c2.bpf_buf[i] = 0.0;
+		c2.bpf_buf[i] = 0.0f;
 
 	c2.softdec = NULL;
 	c2.gray = 1;
@@ -282,7 +282,7 @@ void CCodec2::decode(short *speech, const unsigned char *bits)
 
 	for(i=0; i<2; i++)
 		for(j=1; j<=MAX_AMP; j++)
-			model[i].A[j] = 0.0;
+			model[i].A[j] = 0.0f;
 
 	/* unpack bits from channel ------------------------------------*/
 
@@ -316,14 +316,14 @@ void CCodec2::decode(short *speech, const unsigned char *bits)
 	/* LSPs are sampled every 20ms so we interpolate the frame in
 	   between, then recover spectral amplitudes */
 
-	interpolate_lsp_ver2(&lsps[0][0], c2.prev_lsps_dec, &lsps[1][0], 0.5, LPC_ORD);
+	interpolate_lsp_ver2(&lsps[0][0], c2.prev_lsps_dec, &lsps[1][0], 0.5f, LPC_ORD);
 
 	for(i=0; i<2; i++)
 	{
 		lsp_to_lpc(&lsps[i][0], &ak[i][0], LPC_ORD);
 		qt.aks_to_M2(&(c2.fftr_fwd_cfg), &ak[i][0], LPC_ORD, &model[i], e[i], &snr, 0, c2.lpc_pf, c2.bass_boost, c2.beta, c2.gamma, Aw);
 		qt.apply_lpc_correction(&model[i]);
-		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0);
+		synthesise_one_frame(&speech[c2.n_samp*i], &model[i], Aw, 1.0f);
 	}
 
 	/* update memories for next frame ----------------------------*/
@@ -365,9 +365,9 @@ void CCodec2::synthesise_one_frame(short speech[], MODEL *model, std::complex<fl
 
 	for(i=0; i<c2.n_samp; i++)
 	{
-		if (c2.Sn_[i] > 32767.0)
+		if (c2.Sn_[i] > 32767.0f)
 			speech[i] = 32767;
-		else if (c2.Sn_[i] < -32767.0)
+		else if (c2.Sn_[i] < -32767.0f)
 			speech[i] = -32767;
 		else
 			speech[i] = c2.Sn_[i];
@@ -437,22 +437,22 @@ void CCodec2::ear_protection(float in_out[], int n)
 
 	/* find maximum sample in frame */
 
-	max_sample = 0.0;
+	max_sample = 0.0f;
 	for(i=0; i<n; i++)
 		if (in_out[i] > max_sample)
 			max_sample = in_out[i];
 
 	/* determine how far above set point */
 
-	over = max_sample/30000.0;
+	over = max_sample/30000.0f;
 
 	/* If we are x dB over set point we reduce level by 2x dB, this
 	   attenuates major excursions in amplitude (likely to be caused
 	   by bit errors) more than smaller ones */
 
-	if (over > 1.0)
+	if (over > 1.0f)
 	{
-		gain = 1.0/(over*over);
+		gain = 1.0f/(over*over);
 		for(i=0; i<n; i++)
 			in_out[i] *= gain;
 	}
@@ -481,7 +481,7 @@ void CCodec2::sample_phase(MODEL *model,
 
 	for(m=1; m<=model->L; m++)
 	{
-		b = (int)(m*model->Wo/r + 0.5);
+		b = (int)(m*model->Wo/r + 0.5f);
 		H[m] = std::conj(A[b]);
 	}
 }
@@ -601,7 +601,7 @@ void CCodec2::phase_synth_zero_order(
 	*/
 
 	ex_phase[0] += (model->Wo)*n_samp;
-	ex_phase[0] -= TWO_PI*floorf(ex_phase[0]/TWO_PI + 0.5);
+	ex_phase[0] -= TWO_PI*floorf(ex_phase[0]/TWO_PI + 0.5f);
 
 	for(m=1; m<=model->L; m++)
 	{
@@ -682,9 +682,9 @@ void CCodec2::phase_synth_zero_order(
 
 \*---------------------------------------------------------------------------*/
 
-#define BG_THRESH 40.0	// only consider low levels signals for bg_est
-#define BG_BETA    0.1	// averaging filter constant
-#define BG_MARGIN  6.0	// harmonics this far above BG noise are
+#define BG_THRESH 40.0f	// only consider low levels signals for bg_est
+#define BG_BETA    0.1f	// averaging filter constant
+#define BG_MARGIN  6.0f	// harmonics this far above BG noise are
                         // randomised.  Helped make bg noise less
 			            // spikey (impulsive) for mmt1, but speech was
                         // perhaps a little rougher.
@@ -700,22 +700,22 @@ void CCodec2::postfilter( MODEL *model, float *bg_est )
 	for(m=1; m<=model->L; m++)
 		e += model->A[m]*model->A[m];
 
-	assert(e > 0.0);
-	e = 10.0*log10f(e/model->L);
+	assert(e > 0.0f);
+	e = 10.0f*log10f(e/model->L);
 
 	/* If beneath threhold, update bg estimate.  The idea
 	   of the threshold is to prevent updating during high level
 	   speech. */
 
 	if ((e < BG_THRESH) && !model->voiced)
-		*bg_est =  *bg_est*(1.0 - BG_BETA) + e*BG_BETA;
+		*bg_est =  *bg_est*(1.0f - BG_BETA) + e*BG_BETA;
 
 	/* now mess with phases during voiced frames to make any harmonics
 	   less then our background estimate unvoiced.
 	*/
 
 	uv = 0;
-	thresh = exp10f((*bg_est + BG_MARGIN)/20.0);
+	thresh = exp10f((*bg_est + BG_MARGIN)/20.0f);
 	if (model->voiced)
 		for(m=1; m<=model->L; m++)
 			if (model->A[m] < thresh)
@@ -789,21 +789,21 @@ void CCodec2::make_analysis_window(C2CONST *c2const, FFT_STATE *fft_fwd_cfg, flo
 	   All our analysis/synthsis is centred on the M/2 sample.
 	*/
 
-	m = 0.0;
+	m = 0.0f;
 	for(i=0; i<m_pitch/2-nw/2; i++)
-		w[i] = 0.0;
+		w[i] = 0.0f;
 	for(i=m_pitch/2-nw/2,j=0; i<m_pitch/2+nw/2; i++,j++)
 	{
-		w[i] = 0.5 - 0.5*cosf(TWO_PI*j/(nw-1));
+		w[i] = 0.5f - 0.5f*cosf(TWO_PI*j/(nw-1));
 		m += w[i]*w[i];
 	}
 	for(i=m_pitch/2+nw/2; i<m_pitch; i++)
-		w[i] = 0.0;
+		w[i] = 0.0f;
 
 	/* Normalise - makes freq domain amplitude estimation straight
 	   forward */
 
-	m = 1.0/sqrtf(m*FFT_ENC);
+	m = 1.0f/sqrtf(m*FFT_ENC);
 	for(i=0; i<m_pitch; i++)
 	{
 		w[i] *= m;
@@ -930,14 +930,14 @@ void CCodec2::two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::co
 
 	pmax = TWO_PI/model->Wo + 5;
 	pmin = TWO_PI/model->Wo - 5;
-	pstep = 1.0;
+	pstep = 1.0f;
 	hs_pitch_refinement(model, Sw, pmin, pmax, pstep);
 
 	/* Fine refinement */
 
 	pmax = TWO_PI/model->Wo + 1;
 	pmin = TWO_PI/model->Wo - 1;
-	pstep = 0.25;
+	pstep = 0.25f;
 	hs_pitch_refinement(model,Sw,pmin,pmax,pstep);
 
 	/* Limit range */
@@ -950,7 +950,7 @@ void CCodec2::two_stage_pitch_refinement(C2CONST *c2const, MODEL *model, std::co
 	model->L = floorf(PI/model->Wo);
 
 	/* trap occasional round off issues with floorf() */
-	if (model->Wo*model->L >= 0.95*PI)
+	if (model->Wo*model->L >= 0.95f*PI)
 	{
 		model->L--;
 	}
@@ -989,21 +989,21 @@ void CCodec2::hs_pitch_refinement(MODEL *model, std::complex<float> Sw[], float 
 
 	model->L = PI/model->Wo;	/* use initial pitch est. for L */
 	Wom = model->Wo;
-	Em = 0.0;
+	Em = 0.0f;
 	r = TWO_PI/FFT_ENC;
-	one_on_r = 1.0/r;
+	one_on_r = 1.0f/r;
 
 	/* Determine harmonic sum for a range of Wo values */
 
 	for(p=pmin; p<=pmax; p+=pstep)
 	{
-		E = 0.0;
+		E = 0.0f;
 		Wo = TWO_PI/p;
 
 		/* Sum harmonic magnitudes */
 		for(m=1; m<=model->L; m++)
 		{
-			b = (int)(m*Wo*one_on_r + 0.5);
+			b = (int)(m*Wo*one_on_r + 0.5f);
 			E += Sw[b].real() * Sw[b].real() + Sw[b].imag() * Sw[b].imag();
 		}
 		/* Compare to see if this is a maximum */
@@ -1035,15 +1035,15 @@ void CCodec2::estimate_amplitudes(MODEL *model, std::complex<float> Sw[], int es
 	float den;		/* denominator of amplitude expression */
 
 	float r = TWO_PI/FFT_ENC;
-	float one_on_r = 1.0/r;
+	float one_on_r = 1.0f/r;
 
 	for(m=1; m<=model->L; m++)
 	{
 		/* Estimate ampltude of harmonic */
 
-		den = 0.0;
-		am = (int)((m - 0.5)*model->Wo*one_on_r + 0.5);
-		bm = (int)((m + 0.5)*model->Wo*one_on_r + 0.5);
+		den = 0.0f;
+		am = (int)((m - 0.5f)*model->Wo*one_on_r + 0.5f);
+		bm = (int)((m + 0.5f)*model->Wo*one_on_r + 0.5f);
 
 		for(i=am; i<bm; i++)
 		{
@@ -1054,7 +1054,7 @@ void CCodec2::estimate_amplitudes(MODEL *model, std::complex<float> Sw[], int es
 
 		if (est_phase)
 		{
-			int b = (int)(m*model->Wo/r + 0.5); /* DFT bin of centre of current harmonic */
+			int b = (int)(m*model->Wo/r + 0.5f); /* DFT bin of centre of current harmonic */
 
 			/* Estimate phase of harmonic, this is expensive in CPU for
 			   embedded devicesso we make it an option */
@@ -1088,7 +1088,7 @@ float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<flo
 	float sixty;
 	std::complex<float> Ew(0, 0);
 
-	int l_1000hz = model->L*1000.0/(c2const->Fs/2);
+	int l_1000hz = model->L*1000.0f/(c2const->Fs/2);
 	sig = 1E-4;
 	for(l=1; l<=l_1000hz; l++)
 	{
@@ -1103,13 +1103,13 @@ float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<flo
 	for(l=1; l<=l_1000hz; l++)
 	{
 		Am = std::complex<float>(0.0f, 0.0f);
-		den = 0.0;
-		al = ceilf((l - 0.5)*Wo*FFT_ENC/TWO_PI);
-		bl = ceilf((l + 0.5)*Wo*FFT_ENC/TWO_PI);
+		den = 0.0f;
+		al = ceilf((l - 0.5f)*Wo*FFT_ENC/TWO_PI);
+		bl = ceilf((l + 0.5f)*Wo*FFT_ENC/TWO_PI);
 
 		/* Estimate amplitude of harmonic assuming harmonic is totally voiced */
 
-		offset = FFT_ENC/2 - l*Wo*FFT_ENC/TWO_PI + 0.5;
+		offset = FFT_ENC/2 - l*Wo*FFT_ENC/TWO_PI + 0.5f;
 		for(m=al; m<bl; m++)
 		{
 			Am += W[offset+m] * Sw[m];
@@ -1127,7 +1127,7 @@ float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<flo
 		}
 	}
 
-	snr = 10.0*log10f(sig/error);
+	snr = 10.0f*log10f(sig/error);
 	if (snr > V_THRESH)
 		model->voiced = 1;
 	else
@@ -1142,8 +1142,8 @@ float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<flo
 	   determine if we have made any gross errors.
 	*/
 
-	int l_2000hz = model->L*2000.0/(c2const->Fs/2);
-	int l_4000hz = model->L*4000.0/(c2const->Fs/2);
+	int l_2000hz = model->L*2000.0f/(c2const->Fs/2);
+	int l_4000hz = model->L*4000.0f/(c2const->Fs/2);
 	elow = ehigh = 1E-4;
 	for(l=1; l<=l_2000hz; l++)
 	{
@@ -1153,13 +1153,13 @@ float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<flo
 	{
 		ehigh += model->A[l]*model->A[l];
 	}
-	eratio = 10.0*log10f(elow/ehigh);
+	eratio = 10.0f*log10f(elow/ehigh);
 
 	/* Look for Type 1 errors, strongly V speech that has been
 	   accidentally declared UV */
 
 	if (model->voiced == 0)
-		if (eratio > 10.0)
+		if (eratio > 10.0f)
 			model->voiced = 1;
 
 	/* Look for Type 2 errors, strongly UV speech that has been
@@ -1167,7 +1167,7 @@ float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<flo
 
 	if (model->voiced == 1)
 	{
-		if (eratio < -10.0)
+		if (eratio < -10.0f)
 			model->voiced = 0;
 
 		/* A common source of Type 2 errors is the pitch estimator
@@ -1176,8 +1176,8 @@ float CCodec2::est_voicing_mbe( C2CONST *c2const, MODEL *model, std::complex<flo
 		   These errors are much more common than people with 50Hz3
 		   pitch, so we have just a small eratio threshold. */
 
-		sixty = 60.0*TWO_PI/c2const->Fs;
-		if ((eratio < -4.0) && (model->Wo <= sixty))
+		sixty = 60.0f*TWO_PI/c2const->Fs;
+		if ((eratio < -4.0f) && (model->Wo <= sixty))
 			model->voiced = 0;
 	}
 	//printf(" v: %d snr: %f eratio: %3.2f %f\n",model->voiced,snr,eratio,dF0);
@@ -1204,19 +1204,19 @@ void CCodec2::make_synthesis_window(C2CONST *c2const, float Pn[])
 
 	/* Generate Parzen window in time domain */
 
-	win = 0.0;
+	win = 0.0f;
 	for(i=0; i<n_samp/2-tw; i++)
-		Pn[i] = 0.0;
-	win = 0.0;
-	for(i=n_samp/2-tw; i<n_samp/2+tw; win+=1.0/(2*tw), i++ )
+		Pn[i] = 0.0f;
+	win = 0.0f;
+	for(i=n_samp/2-tw; i<n_samp/2+tw; win+=1.0f/(2*tw), i++ )
 		Pn[i] = win;
 	for(i=n_samp/2+tw; i<3*n_samp/2-tw; i++)
-		Pn[i] = 1.0;
-	win = 1.0;
-	for(i=3*n_samp/2-tw; i<3*n_samp/2+tw; win-=1.0/(2*tw), i++)
+		Pn[i] = 1.0f;
+	win = 1.0f;
+	for(i=3*n_samp/2-tw; i<3*n_samp/2+tw; win-=1.0f/(2*tw), i++)
 		Pn[i] = win;
 	for(i=3*n_samp/2+tw; i<2*n_samp; i++)
-		Pn[i] = 0.0;
+		Pn[i] = 0.0f;
 }
 
 /*---------------------------------------------------------------------------*\
@@ -1251,7 +1251,7 @@ void CCodec2::synthesise(
 		{
 			Sn_[i] = Sn_[i+n_samp];
 		}
-		Sn_[n_samp-1] = 0.0;
+		Sn_[n_samp-1] = 0.0f;
 	}
 
 	for(i=0; i<FFT_DEC/2+1; i++)
@@ -1264,7 +1264,7 @@ void CCodec2::synthesise(
 
 	for(l=1; l<=model->L; l++)
 	{
-		b = (int)(l*model->Wo*FFT_DEC/TWO_PI + 0.5);
+		b = (int)(l*model->Wo*FFT_DEC/TWO_PI + 0.5f);
 		if (b > ((FFT_DEC/2)-1))
 		{
 			b = (FFT_DEC/2)-1;
@@ -1317,7 +1317,7 @@ void CCodec2::interp_Wo(
 	float  Wo_min
 )
 {
-	interp_Wo2(interp, prev, next, 0.5, Wo_min);
+	interp_Wo2(interp, prev, next, 0.5f, Wo_min);
 }
 
 /*---------------------------------------------------------------------------*\
@@ -1350,7 +1350,7 @@ void CCodec2::interp_Wo2(
 	if (interp->voiced)
 	{
 		if (prev->voiced && next->voiced)
-			interp->Wo = (1.0 - weight)*prev->Wo + weight*next->Wo;
+			interp->Wo = (1.0f - weight)*prev->Wo + weight*next->Wo;
 		if (!prev->voiced && next->voiced)
 			interp->Wo = next->Wo;
 		if (prev->voiced && !next->voiced)
@@ -1376,7 +1376,7 @@ void CCodec2::interp_Wo2(
 
 float CCodec2::interp_energy(float prev_e, float next_e)
 {
-	//return powf(10.0, (log10f(prev_e) + log10f(next_e))/2.0);
+	//return powf(10.0f, (log10f(prev_e) + log10f(next_e))/2.0f);
 	return sqrtf(prev_e * next_e); //looks better is math. identical and faster math
 }
 
@@ -1395,7 +1395,7 @@ void CCodec2::interpolate_lsp_ver2(float interp[], float prev[],  float next[], 
 	int i;
 
 	for(i=0; i<order; i++)
-		interp[i] = (1.0 - weight)*prev[i] + weight*next[i];
+		interp[i] = (1.0f - weight)*prev[i] + weight*next[i];
 }
 
 /*---------------------------------------------------------------------------*\
@@ -1413,7 +1413,7 @@ void CCodec2::interpolate_lsp_ver2(float interp[], float prev[],  float next[], 
   A(z) is transformed to P(z) and Q(z) (using a substitution and some
   algebra), to obtain something like:
 
-    A(z) = 0.5[P(z)(z+z^-1) + Q(z)(z-z^-1)]  (1)
+    A(z) = 0.5f[P(z)(z+z^-1) + Q(z)(z-z^-1)]  (1)
 
   As you can imagine A(z) has complex zeros all over the z-plane. P(z)
   and Q(z) have the very neat property of only having zeros _on_ the
@@ -1470,14 +1470,14 @@ void CCodec2::lsp_to_lpc(float *lsp, float *ak, int order)
 
 	for(i=0; i<=4*(order/2)+1; i++)        	/* set contents of buffer to 0 */
 	{
-		*pw++ = 0.0;
+		*pw++ = 0.0f;
 	}
 
 	/* Set pointers up */
 
 	pw = Wp;
-	xin1 = 1.0;
-	xin2 = 1.0;
+	xin1 = 1.0f;
+	xin2 = 1.0f;
 
 	/* reconstruct P(z) and Q(z) by cascading second order polynomials
 	  in form 1 - 2xz(-1) +z(-2), where x is the LSP coefficient */
@@ -1501,11 +1501,11 @@ void CCodec2::lsp_to_lpc(float *lsp, float *ak, int order)
 		}
 		xout1 = xin1 + *(n4+1);
 		xout2 = xin2 - *(n4+2);
-		ak[j] = (xout1 + xout2)*0.5;
+		ak[j] = (xout1 + xout2)*0.5f;
 		*(n4+1) = xin1;
 		*(n4+2) = xin2;
 
-		xin1 = 0.0;
-		xin2 = 0.0;
+		xin1 = 0.0f;
+		xin2 = 0.0f;
 	}
 }

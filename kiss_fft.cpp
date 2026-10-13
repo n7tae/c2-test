@@ -268,8 +268,8 @@ void CKissFFT::kf_work(std::complex<float> *Fout, const std::complex<float> *f, 
 void CKissFFT::kf_factor(int n,int * facbuf)
 {
 	int p=4;
-	double floor_sqrt;
-	floor_sqrt = floorf( sqrtf((double)n) );
+	float floor_sqrt;
+	floor_sqrt = floorf( sqrtf((float)n) );
 
 	/*factor out powers of 4, powers of 2, then any remaining primes */
 	do
@@ -307,10 +307,9 @@ void CKissFFT::fft_alloc(FFT_STATE &state, const int nfft, bool inverse_fft)
 
 	for (int i=0; i<nfft; ++i)
 	{
-		const double pi=3.141592653589793238462643383279502884197169399375105820974944;
-		double phase = -2.0 * pi * i / nfft;
+		float phase = -2.0f * PI * i / nfft;
 		if (state.inverse)
-			phase *= -1.0;
+			phase *= -1.0f;
 		state.twiddles[i] = std::polar(1.0f, float(phase));
 	}
 
@@ -365,9 +364,9 @@ void CKissFFT::fftr_alloc(FFTR_STATE &st, int nfft, const bool inverse_fft)
 
 	for (int i=0; i<nfft/2; ++i)
 	{
-		double phase = -3.141592653589793238462643383279502884197169399375105820974944 * (double(i+1) / nfft + .5);
+		float phase = (-PI) * (float(i+1) / nfft + .5);
 		if (inverse_fft)
-			phase *= -1.0;
+			phase *= -1.0f;
 		st.super_twiddles[i] = std::polar(1.0f, float(phase));
 	}
 }

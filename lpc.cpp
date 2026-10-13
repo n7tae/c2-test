@@ -26,10 +26,9 @@
 */
 
 #define LPC_MAX_N 512		/* maximum no. of samples in frame */
-#define PI 3.141592654		/* mathematical constant */
 
-#define ALPHA 1.0
-#define BETA  0.94
+#define ALPHA 1.0f
+#define BETA  0.94f
 
 #include <assert.h>
 #include <math.h>
@@ -109,7 +108,7 @@ void Clpc::hanning_window(
 	int i;	/* loop variable */
 
 	for(i=0; i<Nsam; i++)
-		Wn[i] = Sn[i]*(0.5 - 0.5*cosf(2*PI*(float)i/(Nsam-1)));
+		Wn[i] = Sn[i]*(0.5f - 0.5f*cosf(2*PI*(float)i/(Nsam-1)));
 }
 
 /*---------------------------------------------------------------------------*\
@@ -132,7 +131,7 @@ void Clpc::autocorrelate(
 
 	for(j=0; j<order+1; j++)
 	{
-		Rn[j] = 0.0;
+		Rn[j] = 0.0f;
 		for(i=0; i<Nsam-j; i++)
 			Rn[j] += Sn[i]*Sn[i+j];
 	}
@@ -167,12 +166,12 @@ void Clpc::levinson_durbin(
 
 	for(i=1; i<=order; i++)
 	{
-		sum = 0.0;
+		sum = 0.0f;
 		for(j=1; j<=i-1; j++)
 			sum += a[i-1][j]*R[i-j];
-		k = -1.0*(R[i] + sum)/e;		/* Equation 38b, Makhoul */
-		if (fabsf(k) > 1.0)
-			k = 0.0;
+		k = -1.0f*(R[i] + sum)/e;		/* Equation 38b, Makhoul */
+		if (fabsf(k) > 1.0f)
+			k = 0.0f;
 
 		a[i][i] = k;
 
@@ -184,7 +183,7 @@ void Clpc::levinson_durbin(
 
 	for(i=1; i<=order; i++)
 		lpcs[i] = a[order][i];
-	lpcs[0] = 1.0;
+	lpcs[0] = 1.0f;
 }
 
 /*---------------------------------------------------------------------------*\
@@ -210,7 +209,7 @@ void Clpc::inverse_filter(
 
 	for(i=0; i<Nsam; i++)
 	{
-		res[i] = 0.0;
+		res[i] = 0.0f;
 		for(j=0; j<=order; j++)
 			res[i] += Sn[i-j]*a[j];
 	}
@@ -266,7 +265,7 @@ void Clpc::synthesis_filter(
 
 void Clpc::find_aks(
 	float Sn[],	/* Nsam samples with order sample memory */
-	float a[],	/* order+1 LPCs with first coeff 1.0 */
+	float a[],	/* order+1 LPCs with first coeff 1.0f */
 	int Nsam,	/* number of input speech samples */
 	int order,	/* order of the LPC analysis */
 	float *E	/* residual energy */
@@ -282,10 +281,10 @@ void Clpc::find_aks(
 	autocorrelate(Wn,R,Nsam,order);
 	levinson_durbin(R,a,order);
 
-	*E = 0.0;
+	*E = 0.0f;
 	for(i=0; i<=order; i++)
 		*E += a[i]*R[i];
-	if (*E < 0.0)
+	if (*E < 0.0f)
 		*E = 1E-12;
 }
 
@@ -300,7 +299,7 @@ void Clpc::find_aks(
 void Clpc::weight(
 	float ak[],	/* vector of order+1 LPCs */
 	float gamma,	/* weighting factor */
-	int order,	/* num LPCs (excluding leading 1.0) */
+	int order,	/* num LPCs (excluding leading 1.0f) */
 	float akw[]	/* weighted vector of order+1 LPCs */
 )
 {

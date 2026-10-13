@@ -32,7 +32,7 @@ long CQbase::quantise(const float *cb, float vec[], float w[], int k, int m, flo
 	beste = 1E32;
 	for(j=0; j<m; j++)
 	{
-		e = 0.0;
+		e = 0.0f;
 		for(i=0; i<k; i++)
 		{
 			diff = cb[j*k+i]-vec[i];
@@ -73,10 +73,10 @@ int CQbase::encode_WoE(MODEL *model, float e, float xq[])
 
 	assert((1<<WO_E_BITS) == nb_entries);
 
-	if (e < 0.0) e = 0;  /* occasional small negative energies due LPC round off I guess */
+	if (e < 0.0f) e = 0;  /* occasional small negative energies due LPC round off I guess */
 
-	x[0] = log10f((model->Wo/PI)*4000.0/50.0)/log10f(2);
-	x[1] = 10.0*log10f(1e-4 + e);
+	x[0] = log10f((model->Wo/PI)*4000.0f/50.0f)/log10f(2);
+	x[1] = 10.0f*log10f(1e-4 + e);
 
 	compute_weights2(x, xq, w);
 	for (i=0; i<ndim; i++)
@@ -89,7 +89,7 @@ int CQbase::encode_WoE(MODEL *model, float e, float xq[])
 		err[i] -= codebook1[ndim*n1+i];
 	}
 
-	//printf("enc: %f %f (%f)(%f) \n", xq[0], xq[1], e, 10.0*log10(1e-4 + e));
+	//printf("enc: %f %f (%f)(%f) \n", xq[0], xq[1], e, 10.0f*log10(1e-4 + e));
 	return n1;
 }
 
@@ -120,7 +120,7 @@ void CQbase::decode_WoE(C2CONST *c2const, MODEL *model, float *e, float xq[], in
 	}
 
 	//printf("dec: %f %f\n", xq[0], xq[1]);
-	model->Wo = powf(2.0, xq[0])*(PI*50.0)/4000.0;
+	model->Wo = powf(2.0f, xq[0])*(PI*50.0f)/4000.0f;
 
 	/* bit errors can make us go out of range leading to all sorts of
 	   probs like seg faults */
@@ -130,7 +130,7 @@ void CQbase::decode_WoE(C2CONST *c2const, MODEL *model, float *e, float xq[], in
 
 	model->L  = PI/model->Wo; /* if we quantise Wo re-compute L */
 
-	*e = exp10f(xq[1]/10.0);
+	*e = exp10f(xq[1]/10.0f);
 }
 
 void CQbase::compute_weights2(const float *x, const float *xp, float *w)
@@ -151,7 +151,7 @@ void CQbase::compute_weights2(const float *x, const float *xp, float *w)
 	if (fabsf(x[0]-xp[0])<.2)
 	{
 		w[0] *= 2;
-		w[1] *= 1.5;
+		w[1] *= 1.5f;
 	}
 	else if (fabsf(x[0]-xp[0])>.5)   /* Lower if not stable */
 	{
@@ -215,7 +215,7 @@ int CQbase::encode_log_Wo(C2CONST *c2const, float Wo, int bits)
 	float norm;
 
 	norm = (log10f(Wo) - log10f(Wo_min))/(log10f(Wo_max) - log10f(Wo_min));
-	index = floorf(Wo_levels * norm + 0.5);
+	index = floorf(Wo_levels * norm + 0.5f);
 	if (index < 0 ) index = 0;
 	if (index > (Wo_levels-1)) index = Wo_levels-1;
 

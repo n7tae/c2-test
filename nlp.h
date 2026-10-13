@@ -40,14 +40,13 @@
 \*---------------------------------------------------------------------------*/
 
 #define PMAX_M      320		/* maximum NLP analysis window size     */
-#define COEFF       0.95	/* notch filter parameter               */
+#define COEFF       0.95f	/* notch filter parameter               */
 #define PE_FFT_SIZE 512		/* DFT size for pitch estimation        */
 #define DEC         5		/* decimation factor                    */
 #define SAMPLE_RATE 8000
-#define PI          3.141592654	/* mathematical constant                */
-#define T           0.1         /* threshold for local minima candidate */
+#define T           0.1f         /* threshold for local minima candidate */
 #define F0_MAX      500
-#define CNLP        0.3	        /* post processor constant              */
+#define CNLP        0.3f	        /* post processor constant              */
 #define NLP_NTAP 48	        /* Decimation LPF order */
 
 /* 8 to 16 kHz sample rate conversion */
